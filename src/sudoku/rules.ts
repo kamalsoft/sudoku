@@ -14,6 +14,11 @@ export function isMistake(solution: number[], index: number, digit: number): boo
   return digit !== solution[index];
 }
 
+// Cells to show in red: duplicates, plus any digit that differs from the solution.
+export function markErrors(conflicts: boolean[], values: number[], solution: number[]): boolean[] {
+  return conflicts.map((conflict, i) => conflict || (values[i] !== 0 && values[i] !== solution[i]));
+}
+
 // Casual mode is a null limit: mistakes are counted but never end the game.
 export function outOfMistakes(mistakes: number, limit: number | null): boolean {
   return limit !== null && mistakes >= limit;

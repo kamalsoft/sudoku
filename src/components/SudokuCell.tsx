@@ -19,12 +19,13 @@ export function SudokuCell({ index, size }: Props) {
   const shakeNonce = useGameStore((s) => (s.shake?.index === index ? s.shake.nonce : 0));
   const gameId = useGameStore((s) => s.gameId);
   const reduce = useReduceMotion();
-  const { value, given, notes, tone } = useGameStore(
+  const { value, given, notes, tone, wrong } = useGameStore(
     useShallow((s) => ({
       value: s.board.values[index],
       given: s.board.givens[index],
       notes: s.board.notes[index],
-      tone: cellTone(s.board.values, s.conflicts, s.selected, index),
+      tone: cellTone(s.board.values, s.errors, s.selected, index),
+      wrong: s.errors[index] && !s.board.givens[index],
     })),
   );
 
@@ -78,7 +79,7 @@ export function SudokuCell({ index, size }: Props) {
         ]}
       >
         {value ? (
-          <Text style={[styles.value, { fontSize: size * 0.55, color: given ? c.given : c.entry }]}>{value}</Text>
+          <Text style={[styles.value, { fontSize: size * 0.55, color: given ? c.given : wrong ? c.error : c.entry }]}>{value}</Text>
         ) : (
           <View style={styles.notes}>
             {Array.from({ length: 9 }, (_, n) => (

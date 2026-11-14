@@ -7,7 +7,7 @@ import { applyDigit, applyErase, fillCandidates, removeFromPeers } from './moves
 import type { Mode } from './moves';
 import { elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
-import { dailySeed, isMistake, outOfMistakes } from './rules';
+import { dailySeed, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
 import { feedback } from '../feedback';
@@ -25,7 +25,8 @@ interface GameState {
   difficulty: Difficulty;
   board: BoardState;
   solution: number[];
-  conflicts: boolean[];
+  // Cells in error: duplicates and wrong digits.
+  errors: boolean[];
   selected: number | null;
   mode: Mode;
   solved: boolean;
@@ -69,7 +70,7 @@ let initializing: Promise<void> | null = null;
 function gameFrom(difficulty: Difficulty, daily: string | null) {
   const rng = daily === null ? Math.random : createRng(dailySeed(daily));
   const { puzzle, solution } = generatePuzzle(difficulty, rng);
-  return { board: createBoard(puzzle), solution, conflicts: findConflicts(puzzle), solved: false };
+  return { board: createBoard(puzzle), solution, errors: markErrors(findConflicts(puzzle), puzzle, solution), solved: false };
 }
 
 function hasProgress(board: BoardState): boolean {
@@ -135,12 +136,12 @@ export const useGameStore = create<GameState>()((set, get) => {
     const s = get();
     if (board === s.board) return;
     const solved = isSolved(board.values, s.solution);
-    const conflicts = findConflicts(board.values);
+    const errors = markErrors(findConflicts(board.values), board.values, s.solution);
     const history = recordChange(s.history, s.board);
 
     if (solved) {
       const elapsed = elapsedNow();
-      set({ board, conflicts, solved, history, accumulatedMs: elapsed, runningSince: null });
+      set({ board, errors, solved, history, accumulatedMs: elapsed, runningSince: null });
       const game = {
         difficulty: s.difficulty,
         won: true,
@@ -154,7 +155,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       return;
     }
 
-    set({ board, conflicts, solved, history });
+    set({ board, errors, solved, history });
     save();
   };
 
@@ -167,7 +168,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     difficulty: 'medium',
     board: createBoard(new Array<number>(81).fill(0)),
     solution: new Array<number>(81).fill(0),
-    conflicts: new Array<boolean>(81).fill(false),
+    errors: new Array<boolean>(81).fill(false),
     selected: null,
     mode: 'enter',
     solved: false,
@@ -196,7 +197,7 @@ export const useGameStore = create<GameState>()((set, get) => {
             difficulty: session.difficulty,
             board: session.board,
             solution: session.solution,
-            conflicts: findConflicts(session.board.values),
+            errors: markErrors(findConflicts(session.board.values), session.board.values, session.solution),
             solved: false,
             accumulatedMs: session.accumulatedMs,
             runningSince: null,
@@ -249,7 +250,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         shake(selected);
         if (outOfMistakes(get().mistakes, get().mistakeLimit)) fail('mistakes', elapsedNow());
         else feedback('error');
-      } else if (get().conflicts[selected]) {
+      } else if (get().errors[selected]) {
         shake(selected);
         feedback('error');
       } else {
@@ -273,7 +274,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (isOver(s)) return;
       const step = undoStep(s.history, s.board);
       if (!step) return;
-      set({ board: step.board, history: step.history, conflicts: findConflicts(step.board.values) });
+      set({ board: step.board, history: step.history, errors: markErrors(findConflicts(step.board.values), step.board.values, s.solution) });
       save();
     },
 
@@ -282,7 +283,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (isOver(s)) return;
       const step = redoStep(s.history, s.board);
       if (!step) return;
-      set({ board: step.board, history: step.history, conflicts: findConflicts(step.board.values) });
+      set({ board: step.board, history: step.history, errors: markErrors(findConflicts(step.board.values), step.board.values, s.solution) });
       save();
     },
 

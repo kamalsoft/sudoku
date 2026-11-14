@@ -6,6 +6,8 @@ import { useColors } from '../theme';
 import type { Palette } from '../theme';
 import { SudokuCell } from './SudokuCell';
 
+const GRID_BORDER = 2;
+
 interface Props {
   size: number;
 }
@@ -15,7 +17,8 @@ export function SudokuGrid({ size }: Props) {
   const styles = useMemo(() => makeStyles(c), [c]);
   const solved = useGameStore((s) => s.solved);
   const reduce = useReduceMotion();
-  const cellSize = size / 9;
+  // The outer border is part of `size`, so cells are sized from the inner area to stay inside it.
+  const cellSize = (size - GRID_BORDER * 2) / 9;
 
   // A short pulse on completion.
   const pulse = useState(() => new Animated.Value(1))[0];
@@ -46,7 +49,7 @@ export function SudokuGrid({ size }: Props) {
 function makeStyles(c: Palette) {
   return StyleSheet.create({
     grid: {
-      borderWidth: 2,
+      borderWidth: GRID_BORDER,
       borderColor: c.lineStrong,
       backgroundColor: c.surface,
     },

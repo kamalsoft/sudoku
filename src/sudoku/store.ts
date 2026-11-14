@@ -233,7 +233,6 @@ export const useGameStore = create<GameState>()((set, get) => {
     selectCell: (index) => {
       if (get().selected !== index) feedback('tick');
       set({ selected: index });
-      if (get().mode === 'erase' && !isOver(get())) commit(applyErase(get().board, index));
     },
 
     moveSelection: (dRow, dCol) => {

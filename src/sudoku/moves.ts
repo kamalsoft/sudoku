@@ -1,6 +1,6 @@
 import type { BoardState } from './engine';
 
-export type Mode = 'enter' | 'pencil' | 'erase';
+export type Mode = 'enter' | 'pencil';
 
 // With notes off there is no pencil mode, so the mode falls back to entering values.
 export function effectiveMode(mode: Mode, notesOn: boolean): Mode {
@@ -25,22 +25,28 @@ export function applyDigit(board: BoardState, index: number, mode: Mode, digit: 
   if (mode === 'enter') {
     values[index] = digit;
     notes[index] = 0;
-  } else if (mode === 'pencil') {
+  } else {
     if (values[index]) return board;
     notes[index] ^= 1 << (digit - 1);
-  } else {
-    return board;
   }
   return { ...board, values, notes };
 }
 
+// Erase removes the entered digit. A cell with no digit gets its pencil marks cleared instead.
+// Given digits are never changed.
 export function applyErase(board: BoardState, index: number): BoardState {
   if (board.givens[index]) return board;
-  const values = board.values.slice();
-  const notes = board.notes.slice();
-  values[index] = 0;
-  notes[index] = 0;
-  return { ...board, values, notes };
+  if (board.values[index]) {
+    const values = board.values.slice();
+    values[index] = 0;
+    return { ...board, values };
+  }
+  if (board.notes[index]) {
+    const notes = board.notes.slice();
+    notes[index] = 0;
+    return { ...board, notes };
+  }
+  return board;
 }
 
 // Candidates for an empty cell: digits not already used in its row, column or box.

@@ -32,11 +32,13 @@ test('given cells are never changed', () => {
   assert.equal(applyErase(b, 0), b);
 });
 
-test('erase clears value and notes', () => {
-  const b = { ...board({ values: [6, ...new Array<number>(80).fill(0)] }), notes: [0b1, ...new Array<number>(80).fill(0)] };
-  const next = applyErase(b, 0);
-  assert.equal(next.values[0], 0);
-  assert.equal(next.notes[0], 0);
+test('erase removes the digit first, then clears pencil marks', () => {
+  const withDigit = { ...board({ values: [6, ...new Array<number>(80).fill(0)] }), notes: [0b1, ...new Array<number>(80).fill(0)] };
+  const once = applyErase(withDigit, 0);
+  assert.equal(once.values[0], 0);
+  assert.equal(once.notes[0], 0b1, 'marks stay until the cell is empty');
+  const marksOnly = { ...board(), notes: [0b101, ...new Array<number>(80).fill(0)] };
+  assert.equal(applyErase(marksOnly, 0).notes[0], 0);
 });
 
 test('cellTone applies selected > error > same > peer priority', () => {
@@ -60,5 +62,4 @@ test('cellTone applies selected > error > same > peer priority', () => {
 test('effectiveMode drops pencil when notes are off', () => {
   assert.equal(effectiveMode('pencil', false), 'enter');
   assert.equal(effectiveMode('pencil', true), 'pencil');
-  assert.equal(effectiveMode('erase', false), 'erase');
 });

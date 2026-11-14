@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import type { Difficulty } from '../sudoku/engine';
-import { elapsedMs } from '../sudoku/session';
+import { elapsedMs, remainingMs } from '../sudoku/session';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
@@ -16,6 +16,13 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'evil', label: 'Evil' },
 ];
 
+const TIME_LIMITS: { value: number | null; label: string }[] = [
+  { value: null, label: 'No limit' },
+  { value: 5 * 60_000, label: '5 min' },
+  { value: 10 * 60_000, label: '10 min' },
+  { value: 15 * 60_000, label: '15 min' },
+];
+
 export function GameHeader() {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -25,14 +32,29 @@ export function GameHeader() {
   const accumulated = useGameStore((s) => s.accumulatedMs);
   const runningSince = useGameStore((s) => s.runningSince);
   const newGame = useGameStore((s) => s.newGame);
+  const timeLimitMs = useGameStore((s) => s.timeLimitMs);
+  const timedOut = useGameStore((s) => s.timedOut);
+  const setTimeLimit = useGameStore((s) => s.setTimeLimit);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => {
+      setNow(Date.now());
+      useGameStore.getState().tick();
+    }, 1000);
     return () => clearInterval(id);
   }, []);
 
-  const status = solved ? 'Solved!' : running ? formatDuration(elapsedMs(accumulated, runningSince, now)) : 'Paused';
+  const elapsed = elapsedMs(accumulated, runningSince, now);
+  const status = solved
+    ? 'Solved!'
+    : timedOut
+      ? "Time's up"
+      : timeLimitMs !== null
+        ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} left`
+        : running
+          ? formatDuration(elapsed)
+          : 'Paused';
 
   return (
     <View style={styles.header}>
@@ -53,6 +75,23 @@ export function GameHeader() {
               style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
+        {TIME_LIMITS.map((t) => {
+          const active = t.value === timeLimitMs;
+          return (
+            <Pressable
+              key={t.label}
+              accessibilityRole="radio"
+              aria-checked={active}
+              onPress={() => setTimeLimit(t.value)}
+              style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.label}</Text>
             </Pressable>
           );
         })}

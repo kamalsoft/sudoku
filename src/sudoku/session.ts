@@ -5,6 +5,7 @@ export interface SessionRecord {
   solution: number[];
   board: BoardState;
   accumulatedMs: number;
+  timeLimitMs?: number | null;
 }
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
@@ -29,8 +30,14 @@ export function parseSession(raw: string): SessionRecord | null {
     isGrid(board?.givens, (b) => typeof b === 'boolean') &&
     isGrid(board?.notes, (n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 0x1ff) &&
     Number.isFinite(accumulatedMs) &&
-    accumulatedMs >= 0;
+    accumulatedMs >= 0 &&
+    (data.timeLimitMs == null || (Number.isFinite(data.timeLimitMs) && data.timeLimitMs > 0));
   return valid ? (data as SessionRecord) : null;
+}
+
+// Time left in a timed game, never below zero.
+export function remainingMs(limit: number, elapsed: number): number {
+  return Math.max(0, limit - elapsed);
 }
 
 // Total play time: time banked while paused, plus time since the timer last started running.

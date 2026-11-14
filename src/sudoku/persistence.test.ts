@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { elapsedMs, parseSession } from './session.ts';
+import { elapsedMs, parseSession, remainingMs } from './session.ts';
 import { dayKey, formatDuration, streakAt, summarize } from './stats.ts';
 import type { GameRecord } from './stats.ts';
 
@@ -77,4 +77,16 @@ test('summarize with no games has no win rate', () => {
 test('formatDuration prints m:ss and h:mm:ss', () => {
   assert.equal(formatDuration(65_000), '1:05');
   assert.equal(formatDuration(3_725_000), '1:02:05');
+});
+
+test('remainingMs counts down and stops at zero', () => {
+  assert.equal(remainingMs(300_000, 60_000), 240_000);
+  assert.equal(remainingMs(300_000, 300_000), 0);
+  assert.equal(remainingMs(300_000, 999_999), 0);
+});
+
+test('parseSession accepts a time limit or none, and rejects a bad one', () => {
+  assert.equal(parseSession(JSON.stringify({ ...validSession(), timeLimitMs: 300_000 }))?.timeLimitMs, 300_000);
+  assert.ok(parseSession(JSON.stringify(validSession())), 'older sessions without a limit still load');
+  assert.equal(parseSession(JSON.stringify({ ...validSession(), timeLimitMs: -5 })), null);
 });

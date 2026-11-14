@@ -5,7 +5,7 @@ import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from '
 import type { History } from './history';
 import { applyDigit, applyErase, fillCandidates, removeFromPeers } from './moves';
 import type { Mode } from './moves';
-import { elapsedMs, parseSession } from './session';
+import { elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
 import { dayKey } from './stats';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
@@ -31,6 +31,8 @@ interface GameState {
   history: History;
   shake: Shake | null;
   gameId: number;
+  timeLimitMs: number | null;
+  timedOut: boolean;
   init: () => Promise<void>;
   selectCell: (index: number) => void;
   moveSelection: (dRow: number, dCol: number) => void;
@@ -40,7 +42,9 @@ interface GameState {
   fillNotes: () => void;
   undo: () => void;
   redo: () => void;
-  newGame: (difficulty: Difficulty) => void;
+  newGame: (difficulty: Difficulty, timeLimitMs?: number | null) => void;
+  setTimeLimit: (timeLimitMs: number | null) => void;
+  tick: () => void;
   pause: () => void;
   resume: () => void;
 }
@@ -62,6 +66,18 @@ function hasProgress(board: BoardState): boolean {
   return board.values.some((v, i) => v !== 0 && !board.givens[i]) || board.notes.some((n) => n !== 0);
 }
 
+// A finished game (solved or out of time) accepts no more moves.
+const isOver = (s: Pick<GameState, 'solved' | 'timedOut'>) => s.solved || s.timedOut;
+
+function parseTimeLimit(raw: string | null): number | null {
+  try {
+    const value = raw === null ? null : JSON.parse(raw);
+    return typeof value === 'number' && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function isDifficulty(value: unknown): value is Difficulty {
   return typeof value === 'string' && value in CLUE_TARGETS;
 }
@@ -79,6 +95,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       solution: s.solution,
       board: s.board,
       accumulatedMs: elapsedNow(),
+      timeLimitMs: s.timeLimitMs,
     };
     enqueue(() => saveSession(session));
   };
@@ -124,10 +141,16 @@ export const useGameStore = create<GameState>()((set, get) => {
     history: emptyHistory,
     shake: null,
     gameId: 0,
+    timeLimitMs: null,
+    timedOut: false,
 
     init: () => {
       initializing ??= (async () => {
-        const [savedDifficulty, raw] = await Promise.all([getSetting('difficulty'), loadSessionRaw()]);
+        const [savedDifficulty, savedLimit, raw] = await Promise.all([
+          getSetting('difficulty'),
+          getSetting('timeLimit'),
+          loadSessionRaw(),
+        ]);
         const session = raw ? parseSession(raw) : null;
         if (session) {
           set({
@@ -143,9 +166,11 @@ export const useGameStore = create<GameState>()((set, get) => {
             mode: 'enter',
             history: emptyHistory,
             gameId: get().gameId + 1,
+            timeLimitMs: session.timeLimitMs ?? null,
+            timedOut: false,
           });
         } else {
-          get().newGame(isDifficulty(savedDifficulty) ? savedDifficulty : 'medium');
+          get().newGame(isDifficulty(savedDifficulty) ? savedDifficulty : 'medium', parseTimeLimit(savedLimit));
         }
       })();
       return initializing;
@@ -154,7 +179,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     selectCell: (index) => {
       if (get().selected !== index) haptic('tick');
       set({ selected: index });
-      if (get().mode === 'erase' && !get().solved) commit(applyErase(get().board, index));
+      if (get().mode === 'erase' && !isOver(get())) commit(applyErase(get().board, index));
     },
 
     moveSelection: (dRow, dCol) => {
@@ -167,8 +192,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     setMode: (mode) => set({ mode }),
 
     inputDigit: (digit) => {
-      const { selected, mode, board, solved } = get();
-      if (selected === null || solved) return;
+      const { selected, mode, board } = get();
+      if (selected === null || isOver(get())) return;
       let next = applyDigit(board, selected, mode, digit);
       if (next === board) return;
       if (mode === 'enter' && usePrefs.getState().autoNotes) next = removeFromPeers(next, selected, digit);
@@ -184,19 +209,19 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     clearSelected: () => {
-      const { selected, board, solved } = get();
-      if (selected === null || solved) return;
+      const { selected, board } = get();
+      if (selected === null || isOver(get())) return;
       commit(applyErase(board, selected));
     },
 
     fillNotes: () => {
-      if (get().solved) return;
+      if (isOver(get())) return;
       commit(fillCandidates(get().board));
     },
 
     undo: () => {
       const s = get();
-      if (s.solved) return;
+      if (isOver(s)) return;
       const step = undoStep(s.history, s.board);
       if (!step) return;
       set({ board: step.board, history: step.history, conflicts: findConflicts(step.board.values) });
@@ -205,16 +230,16 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     redo: () => {
       const s = get();
-      if (s.solved) return;
+      if (isOver(s)) return;
       const step = redoStep(s.history, s.board);
       if (!step) return;
       set({ board: step.board, history: step.history, conflicts: findConflicts(step.board.values) });
       save();
     },
 
-    newGame: (difficulty) => {
+    newGame: (difficulty, timeLimitMs = get().timeLimitMs) => {
       const s = get();
-      if (s.ready && !s.solved && hasProgress(s.board)) {
+      if (s.ready && !isOver(s) && hasProgress(s.board)) {
         const game = { difficulty: s.difficulty, won: false, elapsedMs: elapsedNow(), day: dayKey(new Date()) };
         enqueue(() => recordGame(game));
       }
@@ -222,6 +247,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         ...gameFrom(difficulty),
         ready: true,
         difficulty,
+        timeLimitMs,
+        timedOut: false,
         selected: null,
         mode: 'enter',
         accumulatedMs: 0,
@@ -231,7 +258,22 @@ export const useGameStore = create<GameState>()((set, get) => {
         gameId: s.gameId + 1,
       });
       enqueue(() => setSetting('difficulty', difficulty));
+      enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
       save();
+    },
+
+    setTimeLimit: (timeLimitMs) => get().newGame(get().difficulty, timeLimitMs),
+
+    // Called every second by the header. Ends the game once the limit is used up.
+    tick: () => {
+      const s = get();
+      if (!s.ready || s.timeLimitMs === null || isOver(s)) return;
+      if (remainingMs(s.timeLimitMs, elapsedNow()) > 0) return;
+      set({ timedOut: true, accumulatedMs: s.timeLimitMs, runningSince: null });
+      const game = { difficulty: s.difficulty, won: false, elapsedMs: s.timeLimitMs, day: dayKey(new Date()) };
+      enqueue(() => recordGame(game));
+      enqueue(clearSession);
+      haptic('error');
     },
 
     pause: () => {
@@ -242,7 +284,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     resume: () => {
       const s = get();
-      if (!s.ready || s.solved || s.runningSince !== null) return;
+      if (!s.ready || isOver(s) || s.runningSince !== null) return;
       set({ runningSince: Date.now() });
     },
   };

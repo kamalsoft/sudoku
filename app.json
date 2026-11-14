@@ -7,7 +7,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kamalsoft.sudoku"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,15 +17,20 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.kamalsoft.sudoku"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "static"
     },
     "plugins": [
       "expo-router",
       "expo-sqlite"
     ],
-    "scheme": "sudoku"
+    "scheme": "sudoku",
+    "experiments": {
+      "baseUrl": "/sudoku"
+    }
   }
 }

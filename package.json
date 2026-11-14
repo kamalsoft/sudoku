@@ -1,22 +1,36 @@
 {
   "name": "sudoku",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@expo/metro-runtime": "~58.0.17",
     "expo": "~58.0.25",
+    "expo-haptics": "~58.0.8",
+    "expo-router": "~58.0.31",
+    "expo-sqlite": "~58.0.17",
     "expo-status-bar": "~58.0.5",
     "react": "19.3.0",
-    "react-native": "0.88.1"
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-web": "^0.21.4",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "@types/react": "~19.3.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "node --test src/sudoku/*.test.ts",
+    "lint": "expo lint"
   },
   "private": true
 }

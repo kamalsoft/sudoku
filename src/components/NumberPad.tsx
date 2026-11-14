@@ -10,6 +10,7 @@ interface Props {
   width: number;
 }
 
+// Digits are always shown. Pencil and Fill notes appear only while Notes is on in Settings.
 export function NumberPad({ width }: Props) {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -17,16 +18,24 @@ export function NumberPad({ width }: Props) {
   const setMode = useGameStore((s) => s.setMode);
   const inputDigit = useGameStore((s) => s.inputDigit);
   const fillNotes = useGameStore((s) => s.fillNotes);
-  const undo = useGameStore((s) => s.undo);
-  const redo = useGameStore((s) => s.redo);
   const notes = usePrefs((s) => s.notes);
-  const update = usePrefs((s) => s.update);
   const gap = 8;
   const keySize = (width - gap * 2) / 3;
 
-  const toggleNotes = () => {
-    if (notes) setMode('enter');
-    update('notes', !notes);
+  const toolMode = (m: Mode, label: string) => {
+    const active = mode === m;
+    return (
+      <Pressable
+        key={m}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} mode`}
+        aria-pressed={active}
+        onPress={() => setMode(active ? 'enter' : m)}
+        style={[styles.tool, active && styles.toolActive]}
+      >
+        <Text style={[styles.toolText, active && styles.toolTextActive]}>{label}</Text>
+      </Pressable>
+    );
   };
 
   return (
@@ -38,73 +47,22 @@ export function NumberPad({ width }: Props) {
             accessibilityRole="button"
             accessibilityLabel={`Digit ${n + 1}`}
             onPress={() => inputDigit(n + 1)}
-            style={({ pressed }) => [styles.key, { width: keySize, height: keySize * 0.5, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+            style={({ pressed }) => [styles.key, { width: keySize, height: keySize * 0.6, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
           >
             <Text style={styles.keyText}>{n + 1}</Text>
           </Pressable>
         ))}
       </View>
       <View style={[styles.row, { gap }]}>
-        <Pressable
-          accessibilityRole="switch"
-          accessibilityLabel="Notes"
-          aria-checked={notes}
-          onPress={toggleNotes}
-          style={[styles.modeKey, notes && styles.modeKeyActive]}
-        >
-          <Text style={[styles.modeText, notes && styles.modeTextActive]}>{notes ? 'Notes on' : 'Notes off'}</Text>
-        </Pressable>
-        {notes ? <NotesControls mode={mode} setMode={setMode} fillNotes={fillNotes} styles={styles} /> : null}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Undo" onPress={() => undo()} style={styles.modeKey}>
-          <Text style={styles.modeText}>Undo</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Redo" onPress={() => redo()} style={styles.modeKey}>
-          <Text style={styles.modeText}>Redo</Text>
-        </Pressable>
+        {notes ? toolMode('pencil', 'Pencil') : null}
+        {toolMode('erase', 'Erase')}
+        {notes ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.tool}>
+            <Text style={styles.toolText}>Fill notes</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
-  );
-}
-
-// Pencil, Erase and Fill notes. Shown only while notes are on.
-function NotesControls({
-  mode,
-  setMode,
-  fillNotes,
-  styles,
-}: {
-  mode: Mode;
-  setMode: (mode: Mode) => void;
-  fillNotes: () => void;
-  styles: ReturnType<typeof makeStyles>;
-}) {
-  const modes: { mode: Mode; label: string }[] = [
-    { mode: 'pencil', label: 'Pencil' },
-    { mode: 'erase', label: 'Erase' },
-  ];
-  return (
-    <>
-      {modes.map(({ mode: m, label }) => {
-        const active = mode === m;
-        return (
-          <Pressable
-            key={m}
-            accessibilityRole="button"
-            accessibilityLabel={`${label} mode`}
-            aria-pressed={active}
-            onPress={() => setMode(active ? 'enter' : m)}
-            style={[styles.modeKey, active && styles.modeKeyActive]}
-          >
-            <Text style={[styles.modeText, active && styles.modeTextActive]}>{label}</Text>
-          </Pressable>
-        );
-      })}
-      <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.modeKey}>
-        <Text style={styles.modeText}>Fill notes</Text>
-      </Pressable>
-    </>
   );
 }
 
@@ -117,41 +75,39 @@ function makeStyles(c: Palette) {
     key: {
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
+      borderRadius: c.radius,
       backgroundColor: c.surface,
-      borderWidth: 1,
+      borderWidth: 2,
       borderColor: c.line,
     },
     keyText: {
-      fontSize: 22,
-      fontWeight: '600',
+      fontSize: 24,
+      fontWeight: '800',
       color: c.text,
     },
     row: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
     },
-    modeKey: {
-      flexGrow: 1,
-      flexBasis: 0,
+    tool: {
+      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      height: 44,
-      borderRadius: 8,
-      borderWidth: 1,
+      height: 48,
+      borderRadius: c.radius,
+      borderWidth: 2,
       borderColor: c.line,
       backgroundColor: c.surface,
     },
-    modeKeyActive: {
+    toolActive: {
       backgroundColor: c.accent,
       borderColor: c.accent,
     },
-    modeText: {
+    toolText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: '700',
       color: c.text,
     },
-    modeTextActive: {
+    toolTextActive: {
       color: c.onAccent,
     },
   });

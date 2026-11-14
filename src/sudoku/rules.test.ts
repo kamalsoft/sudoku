@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dailySeed, isMistake, markErrors, outOfMistakes } from './rules.ts';
+import { completedUnits, dailySeed, isMistake, markErrors, outOfMistakes, unitLabel } from './rules.ts';
 import { createRng, generatePuzzle } from './engine.ts';
 
 test('the daily seed is stable for a day and differs between days', () => {
@@ -36,4 +36,20 @@ test('markErrors flags wrong digits and duplicates, not empty or correct cells',
   assert.equal(errors[1], true, 'wrong digit');
   assert.equal(errors[2], false, 'empty cell');
   assert.equal(errors[20], true, 'duplicate');
+});
+
+test('completedUnits reports only units whose nine cells are all correct', () => {
+  // Two tiny "units" keep the test small: a row of cells 0..2 and a row of cells 3..4.
+  const units = [[0, 1, 2], [3, 4]];
+  const solution = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const values = [1, 2, 3, 4, 0, 6, 7, 8, 9];
+  assert.deepEqual(completedUnits(units, values, solution), [0]);
+  assert.deepEqual(completedUnits(units, [1, 2, 9, 4, 5, 6, 7, 8, 9], solution), [1]);
+});
+
+test('unitLabel names rows, columns and blocks from 1', () => {
+  assert.equal(unitLabel(0), 'Row 1');
+  assert.equal(unitLabel(8), 'Row 9');
+  assert.equal(unitLabel(9), 'Column 1');
+  assert.equal(unitLabel(26), 'Block 9');
 });

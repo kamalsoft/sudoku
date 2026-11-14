@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
+import { UNITS } from '../sudoku/engine';
 import { cellTone } from '../sudoku/highlight';
 import { useGameStore } from '../sudoku/store';
 import { useReduceMotion } from '../motion';
@@ -15,10 +16,18 @@ interface Props {
 export function SudokuCell({ index, size }: Props) {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
+  const reduce = useReduceMotion();
   const select = useGameStore((s) => s.selectCell);
   const shakeNonce = useGameStore((s) => (s.shake?.index === index ? s.shake.nonce : 0));
   const gameId = useGameStore((s) => s.gameId);
-  const reduce = useReduceMotion();
+  // Completion glow: the nonce changes when a unit containing this cell completes; delay follows the cell's place in that unit.
+  const glow = useGameStore(
+    useShallow((s) => {
+      const flash = s.unitFlash;
+      const u = flash ? flash.units.find((unit) => UNITS[unit].includes(index)) : undefined;
+      return u === undefined ? { nonce: 0, delay: 0 } : { nonce: flash!.nonce, delay: UNITS[u].indexOf(index) * 70 };
+    }),
+  );
   const { value, given, notes, tone, wrong } = useGameStore(
     useShallow((s) => ({
       value: s.board.values[index],
@@ -29,37 +38,56 @@ export function SudokuCell({ index, size }: Props) {
     })),
   );
 
-  const offset = useState(() => new Animated.Value(0))[0];
-  const fade = useState(() => new Animated.Value(0))[0];
+  const [anim] = useState(() => ({
+    offset: new Animated.Value(0),
+    fade: new Animated.Value(0),
+    flash: new Animated.Value(0),
+    glow: new Animated.Value(0),
+  }));
 
   // Cells fade in row by row whenever a new game starts.
   useEffect(() => {
-    Animated.timing(fade, {
+    Animated.timing(anim.fade, {
       toValue: 1,
       duration: reduce ? 0 : 300,
       delay: reduce ? 0 : Math.floor(index / 9) * 45,
       useNativeDriver: false,
     }).start();
-  }, [gameId, fade, index, reduce]);
+  }, [gameId, anim.fade, index, reduce]);
 
+  // A wrong entry: a red flash and a short shake.
   useEffect(() => {
-    if (!shakeNonce || reduce) return;
+    if (!shakeNonce) return;
+    anim.flash.setValue(1);
+    Animated.timing(anim.flash, { toValue: 0, duration: 450, useNativeDriver: false }).start();
+    if (reduce) return;
     Animated.sequence([
-      Animated.timing(offset, { toValue: -6, duration: 40, useNativeDriver: false }),
-      Animated.timing(offset, { toValue: 6, duration: 40, useNativeDriver: false }),
-      Animated.timing(offset, { toValue: -4, duration: 40, useNativeDriver: false }),
-      Animated.timing(offset, { toValue: 4, duration: 40, useNativeDriver: false }),
-      Animated.timing(offset, { toValue: 0, duration: 40, useNativeDriver: false }),
+      Animated.timing(anim.offset, { toValue: -7, duration: 40, useNativeDriver: false }),
+      Animated.timing(anim.offset, { toValue: 7, duration: 40, useNativeDriver: false }),
+      Animated.timing(anim.offset, { toValue: -5, duration: 40, useNativeDriver: false }),
+      Animated.timing(anim.offset, { toValue: 5, duration: 40, useNativeDriver: false }),
+      Animated.timing(anim.offset, { toValue: 0, duration: 40, useNativeDriver: false }),
     ]).start();
-  }, [shakeNonce, offset, reduce]);
+  }, [shakeNonce, anim, reduce]);
+
+  // A completed row, column or block: a green glow that ripples across it.
+  useEffect(() => {
+    if (!glow.nonce) return;
+    anim.glow.setValue(0);
+    Animated.sequence([
+      Animated.delay(reduce ? 0 : glow.delay),
+      Animated.timing(anim.glow, { toValue: 1, duration: reduce ? 0 : 160, useNativeDriver: false }),
+      Animated.timing(anim.glow, { toValue: 0, duration: reduce ? 0 : 520, useNativeDriver: false }),
+    ]).start();
+  }, [glow.nonce, glow.delay, anim.glow, reduce]);
 
   const row = Math.floor(index / 9);
   const col = index % 9;
   const bgColor = tone === 'none' ? c.surface : c.tone[tone];
-  const label = `Row ${row + 1}, column ${col + 1}, ${value ? `${given ? 'given' : 'your'} ${value}` : 'empty'}`;
+  const label = `Row ${row + 1}, column ${col + 1}, ${value ? `${given ? 'given' : 'your'} ${value}` : 'empty'}${wrong ? ', wrong' : ''}`;
 
   return (
-    <Animated.View style={{ opacity: fade, transform: [{ translateX: offset }] }}>
+    <Animated.View style={{ opacity: anim.fade, transform: [{ translateX: anim.offset }] }}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -78,6 +106,8 @@ export function SudokuCell({ index, size }: Props) {
           },
         ]}
       >
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.flash, opacity: anim.flash }]} />
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.success, opacity: anim.glow }]} />
         {value ? (
           <Text style={[styles.value, { fontSize: size * 0.55, color: given ? c.given : wrong ? c.error : c.entry }]}>{value}</Text>
         ) : (

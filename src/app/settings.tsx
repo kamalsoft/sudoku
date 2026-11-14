@@ -17,6 +17,9 @@ const THEME_LABELS: Record<ThemeName, string> = {
   dark: 'Dark',
   oled: 'True black',
   sepia: 'Sepia',
+  candy: 'Candy',
+  jungle: 'Jungle',
+  space: 'Space',
 };
 
 export default function SettingsScreen() {

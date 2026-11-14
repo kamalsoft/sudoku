@@ -23,3 +23,15 @@ export function markErrors(conflicts: boolean[], values: number[], solution: num
 export function outOfMistakes(mistakes: number, limit: number | null): boolean {
   return limit !== null && mistakes >= limit;
 }
+
+// Units (rows, columns, blocks) whose nine cells all hold the right digit. Pass the engine's UNITS list.
+export function completedUnits(units: number[][], values: number[], solution: number[]): number[] {
+  return units.flatMap((unit, u) => (unit.every((i) => values[i] !== 0 && values[i] === solution[i]) ? [u] : []));
+}
+
+// Names a unit for the player: units 0–8 are rows, 9–17 columns, 18–26 blocks.
+export function unitLabel(u: number): string {
+  if (u < 9) return `Row ${u + 1}`;
+  if (u < 18) return `Column ${u - 8}`;
+  return `Block ${u - 17}`;
+}

@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CelebrationOverlay } from '../components/CelebrationOverlay';
+import { CompletionToast } from '../components/CompletionToast';
 import { GameHeader } from '../components/GameHeader';
 import { NumberPad } from '../components/NumberPad';
 import { SudokuGrid } from '../components/SudokuGrid';
@@ -13,6 +15,7 @@ import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 const WIDE_BREAKPOINT = 768;
+const SIDE_WIDTH = 300;
 
 // Loads preferences and the saved game before the board mounts, so the grid never flashes a blank puzzle.
 export default function GameRoute() {
@@ -44,44 +47,42 @@ function GameScreen() {
   const { width, height } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
   const gridSize = wide ? Math.min(height - 64, 560) : Math.min(width - 32, height * 0.55);
-  const padWidth = wide ? 260 : gridSize;
+  const contentWidth = wide ? SIDE_WIDTH : gridSize;
   const headerIn = useEntrance(0);
   const gridIn = useEntrance(150, 10);
   const padIn = useEntrance(300);
 
-  if (wide) {
-    return (
-      <SafeAreaView style={styles.safe}>
+  return (
+    <SafeAreaView style={styles.safe}>
+      {wide ? (
         <View style={styles.wideRow}>
           <Animated.View style={gridIn}>
             <SudokuGrid size={gridSize} />
           </Animated.View>
-          <View style={[styles.side, { width: padWidth }]}>
+          <View style={[styles.side, { width: contentWidth }]}>
             <Animated.View style={headerIn}>
-              <GameHeader />
+              <GameHeader width={contentWidth} />
             </Animated.View>
             <Animated.View style={padIn}>
-              <NumberPad width={padWidth} />
+              <NumberPad width={contentWidth} />
             </Animated.View>
           </View>
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.column}>
-        <Animated.View style={headerIn}>
-          <GameHeader />
-        </Animated.View>
-        <Animated.View style={gridIn}>
-          <SudokuGrid size={gridSize} />
-        </Animated.View>
-        <Animated.View style={padIn}>
-          <NumberPad width={padWidth} />
-        </Animated.View>
-      </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={styles.column}>
+          <Animated.View style={headerIn}>
+            <GameHeader width={contentWidth} />
+          </Animated.View>
+          <Animated.View style={gridIn}>
+            <SudokuGrid size={gridSize} />
+          </Animated.View>
+          <Animated.View style={padIn}>
+            <NumberPad width={contentWidth} />
+          </Animated.View>
+        </ScrollView>
+      )}
+      <CompletionToast />
+      <CelebrationOverlay />
     </SafeAreaView>
   );
 }
@@ -103,7 +104,7 @@ function makeStyles(c: Palette) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 48,
+      gap: 56,
     },
     side: {
       gap: 24,

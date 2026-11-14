@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/engine';
 import { elapsedMs, remainingMs } from '../sudoku/session';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
-import { usePrefs } from '../prefs';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
@@ -24,7 +24,11 @@ const TIME_LIMITS: { value: number | null; label: string }[] = [
   { value: 15 * 60_000, label: '15 min' },
 ];
 
-export function GameHeader() {
+interface Props {
+  width: number;
+}
+
+export function GameHeader({ width }: Props) {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const difficulty = useGameStore((s) => s.difficulty);
@@ -36,10 +40,10 @@ export function GameHeader() {
   const timeLimitMs = useGameStore((s) => s.timeLimitMs);
   const failed = useGameStore((s) => s.failed);
   const mistakes = useGameStore((s) => s.mistakes);
-  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
   const daily = useGameStore((s) => s.daily);
   const startDaily = useGameStore((s) => s.startDaily);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
+  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -58,13 +62,13 @@ export function GameHeader() {
       : failed === 'mistakes'
         ? 'Out of mistakes'
         : timeLimitMs !== null
-        ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} left`
-        : running
-          ? formatDuration(elapsed)
-          : 'Paused';
+          ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} left`
+          : running
+            ? formatDuration(elapsed)
+            : 'Paused';
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { width }]}>
       <Text style={styles.title}>Sudoku</Text>
       <Text style={styles.status} accessibilityLiveRegion="polite">
         {status}
@@ -76,7 +80,7 @@ export function GameHeader() {
       ) : null}
       {daily !== null ? <Text style={styles.status}>Daily challenge · {daily}</Text> : null}
 
-      <View style={styles.chips} accessibilityRole="radiogroup">
+      <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Difficulty">
         {DIFFICULTIES.map((d) => {
           const active = d.value === difficulty;
           return (
@@ -93,7 +97,7 @@ export function GameHeader() {
         })}
       </View>
 
-      <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
+      <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
         {TIME_LIMITS.map((t) => {
           const active = t.value === timeLimitMs;
           return (
@@ -110,7 +114,7 @@ export function GameHeader() {
         })}
       </View>
 
-      <View style={styles.actions}>
+      <View style={styles.row}>
         <Pressable accessibilityRole="button" onPress={() => newGame(difficulty)} style={styles.action}>
           <Text style={styles.actionText}>New game</Text>
         </Pressable>
@@ -135,26 +139,27 @@ function makeStyles(c: Palette) {
       gap: 8,
     },
     title: {
-      fontSize: 28,
-      fontWeight: '700',
+      fontSize: 30,
+      fontWeight: '800',
       color: c.text,
     },
     status: {
       fontSize: 15,
       color: c.muted,
       fontVariant: ['tabular-nums'],
+      textAlign: 'center',
     },
-    chips: {
+    row: {
+      alignSelf: 'stretch',
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
       gap: 6,
     },
     chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      borderWidth: 1,
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 7,
+      borderRadius: c.radius,
+      borderWidth: 2,
       borderColor: c.line,
       backgroundColor: c.surface,
     },
@@ -164,39 +169,36 @@ function makeStyles(c: Palette) {
     },
     chipText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: '700',
       color: c.text,
     },
     chipTextActive: {
       color: c.onAccent,
     },
-    actions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 2,
-    },
     action: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 8,
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 9,
+      borderRadius: c.radius,
       backgroundColor: c.accent,
     },
     actionText: {
       color: c.onAccent,
-      fontWeight: '600',
+      fontWeight: '700',
+      fontSize: 14,
     },
     actionOutline: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 8,
-      borderWidth: 1,
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 9,
+      borderRadius: c.radius,
+      borderWidth: 2,
       borderColor: c.accent,
     },
     actionOutlineText: {
       color: c.accent,
-      fontWeight: '600',
+      fontWeight: '700',
+      fontSize: 14,
     },
   });
 }

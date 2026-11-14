@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CLUE_TARGETS, createBoard, createRng, findConflicts, generatePuzzle, isSolved } from './engine';
+import { CLUE_TARGETS, UNITS, createBoard, createRng, findConflicts, generatePuzzle, isSolved } from './engine';
 import type { BoardState, Difficulty } from './engine';
 import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from './history';
 import type { History } from './history';
@@ -7,7 +7,7 @@ import { applyDigit, applyErase, effectiveMode, fillCandidates, removeFromPeers 
 import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
-import { dailySeed, isMistake, markErrors, outOfMistakes } from './rules';
+import { completedUnits, dailySeed, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
 import { feedback } from '../feedback';
@@ -19,6 +19,12 @@ export interface Shake {
 }
 
 export type FailReason = 'time' | 'mistakes';
+
+// Rows, columns or blocks completed by the last move. The nonce changes each time, so cells can replay the flash.
+export interface UnitFlash {
+  units: number[];
+  nonce: number;
+}
 
 interface GameState {
   ready: boolean;
@@ -34,6 +40,7 @@ interface GameState {
   runningSince: number | null;
   history: History;
   shake: Shake | null;
+  unitFlash: UnitFlash | null;
   gameId: number;
   timeLimitMs: number | null;
   mistakes: number;
@@ -140,10 +147,14 @@ export const useGameStore = create<GameState>()((set, get) => {
     const solved = isSolved(board.values, s.solution);
     const errors = markErrors(findConflicts(board.values), board.values, s.solution);
     const history = recordChange(s.history, s.board);
+    const before = completedUnits(UNITS, s.board.values, s.solution);
+    const fresh = completedUnits(UNITS, board.values, s.solution).filter((u) => !before.includes(u));
+    const unitFlash = fresh.length > 0 ? { units: fresh, nonce: (s.unitFlash?.nonce ?? 0) + 1 } : s.unitFlash;
+    if (fresh.length > 0) feedback('tick');
 
     if (solved) {
       const elapsed = elapsedNow();
-      set({ board, errors, solved, history, accumulatedMs: elapsed, runningSince: null });
+      set({ board, errors, solved, history, unitFlash, accumulatedMs: elapsed, runningSince: null });
       const game = {
         difficulty: s.difficulty,
         won: true,
@@ -157,7 +168,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       return;
     }
 
-    set({ board, errors, solved, history });
+    set({ board, errors, solved, history, unitFlash });
     save();
   };
 
@@ -178,6 +189,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     runningSince: null,
     history: emptyHistory,
     shake: null,
+    unitFlash: null,
     gameId: 0,
     timeLimitMs: null,
     mistakes: 0,

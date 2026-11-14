@@ -19,7 +19,7 @@ export function playCue(cue: Cue) {
   try {
     if (!modeSet) {
       modeSet = true;
-      void setAudioModeAsync({ playsInSilentMode: false }).catch((error) => console.warn('Audio mode failed', error));
+      void setAudioModeAsync({ playsInSilentMode: true }).catch((error) => console.warn('Audio mode failed', error));
     }
     let player = players[cue];
     if (!player) {

@@ -1,16 +1,11 @@
 import { useMemo } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
-import { THEME_NAMES, useColors } from '../theme';
+import { THEME_NAMES, THEMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
-
-const MISTAKE_LIMITS: { value: number | null; label: string }[] = [
-  { value: null, label: 'Casual' },
-  { value: 3, label: '3 mistakes' },
-  { value: 5, label: '5 mistakes' },
-];
 
 const THEME_LABELS: Record<ThemeName, string> = {
   light: 'Light',
@@ -22,16 +17,25 @@ const THEME_LABELS: Record<ThemeName, string> = {
   space: 'Space',
 };
 
+const MISTAKE_LIMITS: { value: number | null; label: string }[] = [
+  { value: null, label: 'Casual' },
+  { value: 3, label: '3' },
+  { value: 5, label: '5' },
+];
+
+// Settings is grouped the way mobile apps usually are: Appearance, Gameplay, Feedback, About.
+// Each group has a title and a footnote that explains what its options do.
 export default function SettingsScreen() {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const theme = usePrefs((s) => s.theme);
-  const haptics = usePrefs((s) => s.haptics);
   const notes = usePrefs((s) => s.notes);
   const autoNotes = usePrefs((s) => s.autoNotes);
-  const sound = usePrefs((s) => s.sound);
   const mistakeLimit = usePrefs((s) => s.mistakeLimit);
+  const sound = usePrefs((s) => s.sound);
+  const haptics = usePrefs((s) => s.haptics);
   const update = usePrefs((s) => s.update);
+  const version = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -43,103 +47,137 @@ export default function SettingsScreen() {
           <Text style={styles.title}>Settings</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Theme</Text>
-          <View style={styles.chips} accessibilityRole="radiogroup">
-            {THEME_NAMES.map((name) => {
-              const active = name === theme;
-              return (
-                <Pressable
-                  key={name}
-                  accessibilityRole="radio"
-                  aria-checked={active}
-                  onPress={() => update('theme', name)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{THEME_LABELS[name]}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        <Group title="Appearance">
+          {THEME_NAMES.map((name, i) => {
+            const active = name === theme;
+            const palette = THEMES[name];
+            return (
+              <Row
+                key={name}
+                styles={styles}
+                last={i === THEME_NAMES.length - 1}
+                label={THEME_LABELS[name]}
+                role="radio"
+                checked={active}
+                onPress={() => update('theme', name)}
+                leading={
+                  <View style={styles.swatch}>
+                    <View style={[styles.swatchPart, { backgroundColor: palette.background }]} />
+                    <View style={[styles.swatchPart, { backgroundColor: palette.accent }]} />
+                    <View style={[styles.swatchPart, { backgroundColor: palette.entry }]} />
+                  </View>
+                }
+                trailing={active ? <Text style={styles.check}>✓</Text> : null}
+              />
+            );
+          })}
+        </Group>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mistakes</Text>
-          <Text style={styles.hint}>Wrong digits are counted. In capped modes, reaching the limit ends the game.</Text>
-          <View style={styles.chips} accessibilityRole="radiogroup">
-            {MISTAKE_LIMITS.map((m) => {
-              const active = m.value === mistakeLimit;
-              return (
-                <Pressable
-                  key={m.label}
-                  accessibilityRole="radio"
-                  aria-checked={active}
-                  onPress={() => update('mistakeLimit', m.value)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{m.label}</Text>
-                </Pressable>
-              );
-            })}
+        <Group
+          title="Gameplay"
+          footer="Casual never ends a game. In a capped game, a wrong digit counts as a mistake, and reaching the limit ends it."
+        >
+          <View style={styles.rowPlain}>
+            <Text style={[styles.label, styles.labelGrow]}>Mistake limit</Text>
+            <Segmented styles={styles} c={c} options={MISTAKE_LIMITS} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
           </View>
-        </View>
-
-        <View style={styles.section}>
+          <ToggleRow styles={styles} c={c} label="Notes" value={notes} onChange={(v) => update('notes', v)} />
           <ToggleRow
-            label="Notes"
-            hint="Pencil marks on the game screen. Turning them off hides the notes controls."
-            value={notes}
-            onChange={(v) => update('notes', v)}
             styles={styles}
             c={c}
-          />
-          <ToggleRow
             label="Auto-notes"
-            hint={notes ? 'Placing a digit removes it from the notes of cells in the same row, column and box.' : 'Needs Notes to be on.'}
             value={autoNotes}
-            onChange={(v) => update('autoNotes', v)}
             disabled={!notes}
-            styles={styles}
-            c={c}
+            last
+            onChange={(v) => update('autoNotes', v)}
           />
-          <ToggleRow
-            label="Sound"
-            hint="Short cues for taps, errors and wins."
-            value={sound}
-            onChange={(v) => update('sound', v)}
-            styles={styles}
-            c={c}
-          />
-          <ToggleRow
-            label="Haptic feedback"
-            hint={Platform.OS === 'web' ? 'Only on phones and tablets.' : 'Ticks on selection, feedback on errors and wins.'}
-            value={haptics}
-            onChange={(v) => update('haptics', v)}
-            styles={styles}
-            c={c}
-          />
-        </View>
+        </Group>
+
+        <Group title="Feedback" footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>
+          <ToggleRow styles={styles} c={c} label="Sound" value={sound} onChange={(v) => update('sound', v)} />
+          <ToggleRow styles={styles} c={c} label="Haptic feedback" value={haptics} last onChange={(v) => update('haptics', v)} />
+        </Group>
+
+        <Group title="About">
+          <Row styles={styles} label="Version" last trailing={<Text style={styles.value}>{version}</Text>} />
+        </Group>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function ToggleRow({
+// A titled card of related rows, with an optional footnote below.
+function Group({ title, footer, children }: { title: string; footer?: string; children: React.ReactNode }) {
+  const c = useColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
+  return (
+    <View style={styles.group}>
+      <Text style={styles.groupTitle}>{title}</Text>
+      <View style={styles.card}>{children}</View>
+      {footer ? <Text style={styles.footer}>{footer}</Text> : null}
+    </View>
+  );
+}
+
+// One row: optional leading content, the label, then the trailing value or control.
+// A divider sits under every row except the last one in its group.
+function Row({
+  styles,
   label,
-  hint,
+  leading,
+  trailing,
+  onPress,
+  role,
+  checked,
+  last = false,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  label: string;
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
+  onPress?: () => void;
+  role?: 'radio';
+  checked?: boolean;
+  last?: boolean;
+}) {
+  const content = (
+    <>
+      {leading}
+      <Text style={[styles.label, styles.labelGrow]}>{label}</Text>
+      {trailing}
+    </>
+  );
+  const rowStyle = [styles.row, !last && styles.divider];
+  if (!onPress) return <View style={rowStyle}>{content}</View>;
+  return (
+    <Pressable
+      accessibilityRole={role ?? 'button'}
+      accessibilityLabel={label}
+      aria-checked={role === 'radio' ? checked : undefined}
+      onPress={onPress}
+      style={({ pressed }) => [rowStyle, pressed && styles.pressed]}
+    >
+      {content}
+    </Pressable>
+  );
+}
+
+function ToggleRow({
+  styles,
+  c,
+  label,
   value,
   onChange,
   disabled = false,
-  styles,
-  c,
+  last = false,
 }: {
+  styles: ReturnType<typeof makeStyles>;
+  c: Palette;
   label: string;
-  hint: string;
   value: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
-  styles: ReturnType<typeof makeStyles>;
-  c: Palette;
+  last?: boolean;
 }) {
   return (
     <Pressable
@@ -149,16 +187,48 @@ function ToggleRow({
       aria-disabled={disabled}
       disabled={disabled}
       onPress={() => onChange(!value)}
-      style={[styles.toggleRow, disabled && styles.disabled]}
+      style={({ pressed }) => [styles.row, !last && styles.divider, disabled && styles.disabled, pressed && styles.pressed]}
     >
-      <View style={styles.toggleText}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.hint}>{hint}</Text>
-      </View>
+      <Text style={[styles.label, styles.labelGrow]}>{label}</Text>
       <View style={[styles.track, { backgroundColor: value ? c.accent : c.line }]}>
         <View style={[styles.thumb, value && styles.thumbOn]} />
       </View>
     </Pressable>
+  );
+}
+
+// Small segmented control for a short list of choices.
+function Segmented<T extends number | null>({
+  styles,
+  c,
+  options,
+  value,
+  onChange,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  c: Palette;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segmented} accessibilityRole="radiogroup">
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={String(o.value)}
+            accessibilityRole="radio"
+            accessibilityLabel={o.value === null ? 'Casual, no limit' : `${o.label} mistakes`}
+            aria-checked={active}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, active && { backgroundColor: c.accent }]}
+          >
+            <Text style={[styles.segmentText, { color: active ? c.onAccent : c.text }]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -170,7 +240,8 @@ function makeStyles(c: Palette) {
     },
     content: {
       padding: 16,
-      gap: 24,
+      paddingBottom: 32,
+      gap: 8,
       maxWidth: 560,
       width: '100%',
       alignSelf: 'center',
@@ -179,11 +250,12 @@ function makeStyles(c: Palette) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+      marginBottom: 8,
     },
     back: {
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 8,
+      borderRadius: c.radius,
       borderWidth: 1,
       borderColor: c.accent,
     },
@@ -192,66 +264,108 @@ function makeStyles(c: Palette) {
       fontWeight: '600',
     },
     title: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontSize: 26,
+      fontWeight: '800',
       color: c.text,
     },
-    section: {
-      gap: 12,
+    group: {
+      gap: 6,
+      marginTop: 12,
     },
-    sectionTitle: {
-      fontSize: 14,
-      fontWeight: '600',
+    groupTitle: {
+      fontSize: 13,
+      fontWeight: '700',
       color: c.muted,
       textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      paddingHorizontal: 4,
     },
-    chips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    chip: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 16,
+    card: {
+      borderRadius: c.radius + 4,
+      backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.line,
-      backgroundColor: c.surface,
+      overflow: 'hidden',
     },
-    chipActive: {
-      backgroundColor: c.accent,
-      borderColor: c.accent,
+    footer: {
+      fontSize: 13,
+      color: c.muted,
+      paddingHorizontal: 4,
+      marginTop: 2,
     },
-    chipText: {
-      fontWeight: '600',
-      color: c.text,
-    },
-    chipTextActive: {
-      color: c.onAccent,
-    },
-    toggleRow: {
+    row: {
+      minHeight: 52,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 16,
-      padding: 14,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: c.line,
-      backgroundColor: c.surface,
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
     },
-    toggleText: {
-      flex: 1,
-      gap: 2,
+    rowPlain: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+    },
+    divider: {
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+    },
+    pressed: {
+      backgroundColor: c.line,
+    },
+    disabled: {
+      opacity: 0.45,
     },
     label: {
       fontSize: 16,
-      fontWeight: '600',
       color: c.text,
     },
-    hint: {
-      fontSize: 13,
+    labelGrow: {
+      flex: 1,
+    },
+    value: {
+      fontSize: 16,
       color: c.muted,
+      fontVariant: ['tabular-nums'],
+    },
+    check: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.accent,
+    },
+    swatch: {
+      flexDirection: 'row',
+      width: 40,
+      height: 24,
+      borderRadius: 6,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.line,
+    },
+    swatchPart: {
+      flex: 1,
+    },
+    segmented: {
+      flexDirection: 'row',
+      borderRadius: c.radius,
+      borderWidth: 1,
+      borderColor: c.accent,
+      overflow: 'hidden',
+    },
+    segment: {
+      minWidth: 52,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      alignItems: 'center',
+    },
+    segmentText: {
+      fontSize: 14,
+      fontWeight: '700',
     },
     track: {
       width: 46,
@@ -268,9 +382,6 @@ function makeStyles(c: Palette) {
     },
     thumbOn: {
       alignSelf: 'flex-end',
-    },
-    disabled: {
-      opacity: 0.5,
     },
   });
 }

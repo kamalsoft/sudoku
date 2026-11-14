@@ -33,7 +33,11 @@ export function GameHeader() {
   const runningSince = useGameStore((s) => s.runningSince);
   const newGame = useGameStore((s) => s.newGame);
   const timeLimitMs = useGameStore((s) => s.timeLimitMs);
-  const timedOut = useGameStore((s) => s.timedOut);
+  const failed = useGameStore((s) => s.failed);
+  const mistakes = useGameStore((s) => s.mistakes);
+  const mistakeLimit = useGameStore((s) => s.mistakeLimit);
+  const daily = useGameStore((s) => s.daily);
+  const startDaily = useGameStore((s) => s.startDaily);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
 
   const [now, setNow] = useState(() => Date.now());
@@ -48,9 +52,11 @@ export function GameHeader() {
   const elapsed = elapsedMs(accumulated, runningSince, now);
   const status = solved
     ? 'Solved!'
-    : timedOut
+    : failed === 'time'
       ? "Time's up"
-      : timeLimitMs !== null
+      : failed === 'mistakes'
+        ? 'Out of mistakes'
+        : timeLimitMs !== null
         ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} left`
         : running
           ? formatDuration(elapsed)
@@ -62,6 +68,12 @@ export function GameHeader() {
       <Text style={styles.status} accessibilityLiveRegion="polite">
         {status}
       </Text>
+      {mistakeLimit !== null || mistakes > 0 ? (
+        <Text style={styles.status}>
+          {mistakeLimit !== null ? `Mistakes ${mistakes} of ${mistakeLimit}` : `Mistakes ${mistakes}`}
+        </Text>
+      ) : null}
+      {daily !== null ? <Text style={styles.status}>Daily challenge · {daily}</Text> : null}
 
       <View style={styles.chips} accessibilityRole="radiogroup">
         {DIFFICULTIES.map((d) => {
@@ -100,6 +112,9 @@ export function GameHeader() {
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" onPress={() => newGame(difficulty)} style={styles.action}>
           <Text style={styles.actionText}>New game</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={startDaily} style={styles.actionOutline}>
+          <Text style={styles.actionOutlineText}>Daily</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/stats')} style={styles.actionOutline}>
           <Text style={styles.actionOutlineText}>Stats</Text>

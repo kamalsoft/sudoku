@@ -5,7 +5,10 @@ import type { ThemeName } from './theme';
 interface Prefs {
   theme: ThemeName;
   haptics: boolean;
+  sound: boolean;
   autoNotes: boolean;
+  // Mistakes that end a game. null is casual mode: mistakes are counted but never end the game.
+  mistakeLimit: number | null;
 }
 
 interface PrefsState extends Prefs {
@@ -14,7 +17,7 @@ interface PrefsState extends Prefs {
   update: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
 }
 
-const DEFAULTS: Prefs = { theme: 'light', haptics: true, autoNotes: false };
+const DEFAULTS: Prefs = { theme: 'light', haptics: true, sound: true, autoNotes: false, mistakeLimit: null };
 
 export const usePrefs = create<PrefsState>()((set) => ({
   ...DEFAULTS,

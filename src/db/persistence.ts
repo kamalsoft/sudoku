@@ -24,21 +24,28 @@ export async function clearSession(): Promise<void> {
 export async function recordGame(game: GameRecord): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at, daily) VALUES (?, ?, ?, ?, ?, ?)',
     game.difficulty,
     game.won ? 1 : 0,
     Math.round(game.elapsedMs),
     game.day,
     new Date().toISOString(),
+    game.daily ? 1 : 0,
   );
 }
 
 export async function loadGames(): Promise<GameRecord[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<{ difficulty: GameRecord['difficulty']; won: number; elapsed_ms: number; day: string }>(
-    'SELECT difficulty, won, elapsed_ms, day FROM game_history',
+  const rows = await db.getAllAsync<{ difficulty: GameRecord['difficulty']; won: number; elapsed_ms: number; day: string; daily: number }>(
+    'SELECT difficulty, won, elapsed_ms, day, daily FROM game_history',
   );
-  return rows.map((r) => ({ difficulty: r.difficulty, won: r.won === 1, elapsedMs: r.elapsed_ms, day: r.day }));
+  return rows.map((r) => ({
+    difficulty: r.difficulty,
+    won: r.won === 1,
+    elapsedMs: r.elapsed_ms,
+    day: r.day,
+    daily: r.daily === 1,
+  }));
 }
 
 export async function getSetting(key: string): Promise<string | null> {

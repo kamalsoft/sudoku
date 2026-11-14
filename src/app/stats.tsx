@@ -46,6 +46,8 @@ export default function StatsScreen() {
               <Summary label="Won" value={stats.won} />
               <Summary label="Win rate" value={stats.winRate === null ? null : stats.winRate * 100} suffix="%" />
               <Summary label="Streak (days)" value={stats.streak} />
+              <Summary label="Daily challenges won" value={stats.dailyWins} />
+              <Summary label="Daily streak" value={stats.dailyStreak} />
             </View>
 
             <View style={styles.table}>

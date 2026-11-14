@@ -6,6 +6,12 @@ import { usePrefs } from '../prefs';
 import { THEME_NAMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
 
+const MISTAKE_LIMITS: { value: number | null; label: string }[] = [
+  { value: null, label: 'Casual' },
+  { value: 3, label: '3 mistakes' },
+  { value: 5, label: '5 mistakes' },
+];
+
 const THEME_LABELS: Record<ThemeName, string> = {
   light: 'Light',
   dark: 'Dark',
@@ -19,6 +25,8 @@ export default function SettingsScreen() {
   const theme = usePrefs((s) => s.theme);
   const haptics = usePrefs((s) => s.haptics);
   const autoNotes = usePrefs((s) => s.autoNotes);
+  const sound = usePrefs((s) => s.sound);
+  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
   const update = usePrefs((s) => s.update);
 
   return (
@@ -52,11 +60,40 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Mistakes</Text>
+          <Text style={styles.hint}>Wrong digits are counted. In capped modes, reaching the limit ends the game.</Text>
+          <View style={styles.chips} accessibilityRole="radiogroup">
+            {MISTAKE_LIMITS.map((m) => {
+              const active = m.value === mistakeLimit;
+              return (
+                <Pressable
+                  key={m.label}
+                  accessibilityRole="radio"
+                  aria-checked={active}
+                  onPress={() => update('mistakeLimit', m.value)}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{m.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <ToggleRow
             label="Auto-notes"
             hint="Placing a digit removes it from the notes of cells in the same row, column and box."
             value={autoNotes}
             onChange={(v) => update('autoNotes', v)}
+            styles={styles}
+            c={c}
+          />
+          <ToggleRow
+            label="Sound"
+            hint="Short cues for taps, errors and wins."
+            value={sound}
+            onChange={(v) => update('sound', v)}
             styles={styles}
             c={c}
           />

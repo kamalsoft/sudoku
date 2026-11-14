@@ -13,7 +13,8 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
 
   const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-  if ((version?.user_version ?? 0) < 1) {
+  const current = version?.user_version ?? 0;
+  if (current < 1) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(`
         CREATE TABLE active_session (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL);
@@ -27,6 +28,14 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE TABLE user_settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
         PRAGMA user_version = 1;
+      `);
+    });
+  }
+  if (current < 2) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        ALTER TABLE game_history ADD COLUMN daily INTEGER NOT NULL DEFAULT 0;
+        PRAGMA user_version = 2;
       `);
     });
   }

@@ -85,6 +85,13 @@ test('remainingMs counts down and stops at zero', () => {
   assert.equal(remainingMs(300_000, 999_999), 0);
 });
 
+test('parseSession checks mistake and daily fields', () => {
+  const ok = parseSession(JSON.stringify({ ...validSession(), mistakes: 2, mistakeLimit: 3, daily: '2026-11-14' }));
+  assert.equal(ok?.mistakes, 2);
+  assert.equal(parseSession(JSON.stringify({ ...validSession(), mistakes: -1 })), null);
+  assert.equal(parseSession(JSON.stringify({ ...validSession(), mistakeLimit: 0 })), null);
+});
+
 test('parseSession accepts a time limit or none, and rejects a bad one', () => {
   assert.equal(parseSession(JSON.stringify({ ...validSession(), timeLimitMs: 300_000 }))?.timeLimitMs, 300_000);
   assert.ok(parseSession(JSON.stringify(validSession())), 'older sessions without a limit still load');

@@ -5,6 +5,7 @@ export interface GameRecord {
   won: boolean;
   elapsedMs: number;
   day: string; // local calendar day, YYYY-MM-DD
+  daily?: boolean;
 }
 
 export interface DifficultyStats {
@@ -19,6 +20,8 @@ export interface Stats {
   winRate: number | null;
   streak: number;
   byDifficulty: Record<Difficulty, DifficultyStats>;
+  dailyWins: number;
+  dailyStreak: number;
 }
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
@@ -67,6 +70,8 @@ export function summarize(games: GameRecord[], today: string): Stats {
     winRate: played === 0 ? null : won / played,
     streak: streakAt(new Set(games.filter((g) => g.won).map((g) => g.day)), today),
     byDifficulty,
+    dailyWins: games.filter((g) => g.won && g.daily).length,
+    dailyStreak: streakAt(new Set(games.filter((g) => g.won && g.daily).map((g) => g.day)), today),
   };
 }
 

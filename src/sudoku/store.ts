@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CLUE_TARGETS, createBoard, findConflicts, generatePuzzle, isSolved } from './engine';
+import { CLUE_TARGETS, createBoard, createRng, findConflicts, generatePuzzle, isSolved } from './engine';
 import type { BoardState, Difficulty } from './engine';
 import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from './history';
 import type { History } from './history';
@@ -7,15 +7,18 @@ import { applyDigit, applyErase, fillCandidates, removeFromPeers } from './moves
 import type { Mode } from './moves';
 import { elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
+import { dailySeed, isMistake, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
-import { haptic } from '../feedback';
+import { feedback } from '../feedback';
 import { usePrefs } from '../prefs';
 
 export interface Shake {
   index: number;
   nonce: number;
 }
+
+export type FailReason = 'time' | 'mistakes';
 
 interface GameState {
   ready: boolean;
@@ -32,7 +35,12 @@ interface GameState {
   shake: Shake | null;
   gameId: number;
   timeLimitMs: number | null;
-  timedOut: boolean;
+  mistakeLimit: number | null;
+  mistakes: number;
+  // Why the game ended without a win, if it did.
+  failed: FailReason | null;
+  // Local day of the daily challenge being played, or null for a normal game.
+  daily: string | null;
   init: () => Promise<void>;
   selectCell: (index: number) => void;
   moveSelection: (dRow: number, dCol: number) => void;
@@ -42,7 +50,8 @@ interface GameState {
   fillNotes: () => void;
   undo: () => void;
   redo: () => void;
-  newGame: (difficulty: Difficulty, timeLimitMs?: number | null) => void;
+  newGame: (difficulty: Difficulty, timeLimitMs?: number | null, daily?: string | null) => void;
+  startDaily: () => void;
   setTimeLimit: (timeLimitMs: number | null) => void;
   tick: () => void;
   pause: () => void;
@@ -57,8 +66,9 @@ function enqueue(task: () => Promise<unknown>) {
 
 let initializing: Promise<void> | null = null;
 
-function gameFrom(difficulty: Difficulty) {
-  const { puzzle, solution } = generatePuzzle(difficulty);
+function gameFrom(difficulty: Difficulty, daily: string | null) {
+  const rng = daily === null ? Math.random : createRng(dailySeed(daily));
+  const { puzzle, solution } = generatePuzzle(difficulty, rng);
   return { board: createBoard(puzzle), solution, conflicts: findConflicts(puzzle), solved: false };
 }
 
@@ -66,8 +76,8 @@ function hasProgress(board: BoardState): boolean {
   return board.values.some((v, i) => v !== 0 && !board.givens[i]) || board.notes.some((n) => n !== 0);
 }
 
-// A finished game (solved or out of time) accepts no more moves.
-const isOver = (s: Pick<GameState, 'solved' | 'timedOut'>) => s.solved || s.timedOut;
+// A finished game (solved, out of time, or out of mistakes) accepts no more moves.
+const isOver = (s: Pick<GameState, 'solved' | 'failed'>) => s.solved || s.failed !== null;
 
 function parseTimeLimit(raw: string | null): number | null {
   try {
@@ -96,8 +106,27 @@ export const useGameStore = create<GameState>()((set, get) => {
       board: s.board,
       accumulatedMs: elapsedNow(),
       timeLimitMs: s.timeLimitMs,
+      mistakes: s.mistakes,
+      mistakeLimit: s.mistakeLimit,
+      daily: s.daily,
     };
     enqueue(() => saveSession(session));
+  };
+
+  // Ends the game without a win and records it. The session is cleared, so a reload starts fresh.
+  const fail = (reason: FailReason, elapsed: number) => {
+    const s = get();
+    set({ failed: reason, accumulatedMs: elapsed, runningSince: null });
+    const game = {
+      difficulty: s.difficulty,
+      won: false,
+      elapsedMs: elapsed,
+      day: dayKey(new Date()),
+      daily: s.daily !== null,
+    };
+    enqueue(() => recordGame(game));
+    enqueue(clearSession);
+    feedback('error');
   };
 
   // Writes the board, keeps undo history, and recomputes the derived state.
@@ -112,10 +141,16 @@ export const useGameStore = create<GameState>()((set, get) => {
     if (solved) {
       const elapsed = elapsedNow();
       set({ board, conflicts, solved, history, accumulatedMs: elapsed, runningSince: null });
-      const game = { difficulty: s.difficulty, won: true, elapsedMs: elapsed, day: dayKey(new Date()) };
+      const game = {
+        difficulty: s.difficulty,
+        won: true,
+        elapsedMs: elapsed,
+        day: dayKey(new Date()),
+        daily: s.daily !== null,
+      };
       enqueue(() => recordGame(game));
       enqueue(clearSession);
-      haptic('success');
+      feedback('success');
       return;
     }
 
@@ -142,7 +177,10 @@ export const useGameStore = create<GameState>()((set, get) => {
     shake: null,
     gameId: 0,
     timeLimitMs: null,
-    timedOut: false,
+    mistakeLimit: null,
+    mistakes: 0,
+    failed: null,
+    daily: null,
 
     init: () => {
       initializing ??= (async () => {
@@ -167,7 +205,10 @@ export const useGameStore = create<GameState>()((set, get) => {
             history: emptyHistory,
             gameId: get().gameId + 1,
             timeLimitMs: session.timeLimitMs ?? null,
-            timedOut: false,
+            mistakeLimit: session.mistakeLimit ?? null,
+            mistakes: session.mistakes ?? 0,
+            failed: null,
+            daily: session.daily ?? null,
           });
         } else {
           get().newGame(isDifficulty(savedDifficulty) ? savedDifficulty : 'medium', parseTimeLimit(savedLimit));
@@ -177,7 +218,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     selectCell: (index) => {
-      if (get().selected !== index) haptic('tick');
+      if (get().selected !== index) feedback('tick');
       set({ selected: index });
       if (get().mode === 'erase' && !isOver(get())) commit(applyErase(get().board, index));
     },
@@ -197,14 +238,22 @@ export const useGameStore = create<GameState>()((set, get) => {
       let next = applyDigit(board, selected, mode, digit);
       if (next === board) return;
       if (mode === 'enter' && usePrefs.getState().autoNotes) next = removeFromPeers(next, selected, digit);
+
+      // Count the mistake before committing, so the saved session includes it.
+      const wrong = mode === 'enter' && isMistake(get().solution, selected, digit);
+      if (wrong) set({ mistakes: get().mistakes + 1 });
       commit(next);
 
       if (mode !== 'enter' || get().solved) return;
-      if (get().conflicts[selected]) {
+      if (wrong) {
         shake(selected);
-        haptic('error');
+        if (outOfMistakes(get().mistakes, get().mistakeLimit)) fail('mistakes', elapsedNow());
+        else feedback('error');
+      } else if (get().conflicts[selected]) {
+        shake(selected);
+        feedback('error');
       } else {
-        haptic('tick');
+        feedback('tick');
       }
     },
 
@@ -237,18 +286,27 @@ export const useGameStore = create<GameState>()((set, get) => {
       save();
     },
 
-    newGame: (difficulty, timeLimitMs = get().timeLimitMs) => {
+    newGame: (difficulty, timeLimitMs = get().timeLimitMs, daily = null) => {
       const s = get();
       if (s.ready && !isOver(s) && hasProgress(s.board)) {
-        const game = { difficulty: s.difficulty, won: false, elapsedMs: elapsedNow(), day: dayKey(new Date()) };
+        const game = {
+          difficulty: s.difficulty,
+          won: false,
+          elapsedMs: elapsedNow(),
+          day: dayKey(new Date()),
+          daily: s.daily !== null,
+        };
         enqueue(() => recordGame(game));
       }
       set({
-        ...gameFrom(difficulty),
+        ...gameFrom(difficulty, daily),
         ready: true,
         difficulty,
         timeLimitMs,
-        timedOut: false,
+        mistakeLimit: usePrefs.getState().mistakeLimit,
+        mistakes: 0,
+        failed: null,
+        daily,
         selected: null,
         mode: 'enter',
         accumulatedMs: 0,
@@ -262,18 +320,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       save();
     },
 
-    setTimeLimit: (timeLimitMs) => get().newGame(get().difficulty, timeLimitMs),
+    startDaily: () => get().newGame('medium', get().timeLimitMs, dayKey(new Date())),
+
+    setTimeLimit: (timeLimitMs) => get().newGame(get().difficulty, timeLimitMs, get().daily),
 
     // Called every second by the header. Ends the game once the limit is used up.
     tick: () => {
       const s = get();
       if (!s.ready || s.timeLimitMs === null || isOver(s)) return;
       if (remainingMs(s.timeLimitMs, elapsedNow()) > 0) return;
-      set({ timedOut: true, accumulatedMs: s.timeLimitMs, runningSince: null });
-      const game = { difficulty: s.difficulty, won: false, elapsedMs: s.timeLimitMs, day: dayKey(new Date()) };
-      enqueue(() => recordGame(game));
-      enqueue(clearSession);
-      haptic('error');
+      fail('time', s.timeLimitMs);
     },
 
     pause: () => {

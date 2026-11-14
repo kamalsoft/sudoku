@@ -6,6 +6,9 @@ export interface SessionRecord {
   board: BoardState;
   accumulatedMs: number;
   timeLimitMs?: number | null;
+  mistakes?: number;
+  mistakeLimit?: number | null;
+  daily?: string | null;
 }
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
@@ -31,7 +34,10 @@ export function parseSession(raw: string): SessionRecord | null {
     isGrid(board?.notes, (n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 0x1ff) &&
     Number.isFinite(accumulatedMs) &&
     accumulatedMs >= 0 &&
-    (data.timeLimitMs == null || (Number.isFinite(data.timeLimitMs) && data.timeLimitMs > 0));
+    (data.timeLimitMs == null || (Number.isFinite(data.timeLimitMs) && data.timeLimitMs > 0)) &&
+    (data.mistakes === undefined || (Number.isInteger(data.mistakes) && data.mistakes >= 0)) &&
+    (data.mistakeLimit == null || (Number.isInteger(data.mistakeLimit) && data.mistakeLimit > 0)) &&
+    (data.daily == null || typeof data.daily === 'string');
   return valid ? (data as SessionRecord) : null;
 }
 

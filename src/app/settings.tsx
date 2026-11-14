@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
+import { useInstall } from '../install';
 import { THEME_NAMES, THEMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
 
@@ -36,6 +37,7 @@ export default function SettingsScreen() {
   const haptics = usePrefs((s) => s.haptics);
   const update = usePrefs((s) => s.update);
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const { canInstall, installed, ios, promptInstall } = useInstall();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -98,7 +100,21 @@ export default function SettingsScreen() {
           <ToggleRow styles={styles} c={c} label="Haptic feedback" value={haptics} last onChange={(v) => update('haptics', v)} />
         </Group>
 
-        <Group title="About">
+        <Group
+          title="About"
+          footer={Platform.OS === 'web' && !installed && ios ? 'On iPhone or iPad, tap Share, then Add to Home Screen.' : undefined}
+        >
+          {Platform.OS === 'web' ? (
+            <Row
+              styles={styles}
+              label={installed ? 'App installed' : 'Install app'}
+              onPress={installed || (!canInstall && ios) ? undefined : canInstall ? () => void promptInstall() : undefined}
+              role={canInstall ? 'button' : undefined}
+              trailing={
+                installed ? <Text style={styles.check}>✓</Text> : canInstall ? <Text style={styles.linkText}>Install</Text> : <Text style={styles.value}>{ios ? 'Share menu' : 'Browser menu'}</Text>
+              }
+            />
+          ) : null}
           <Row styles={styles} label="Version" last trailing={<Text style={styles.value}>{version}</Text>} />
         </Group>
       </ScrollView>
@@ -136,7 +152,7 @@ function Row({
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   onPress?: () => void;
-  role?: 'radio';
+  role?: 'radio' | 'button';
   checked?: boolean;
   last?: boolean;
 }) {
@@ -336,6 +352,11 @@ function makeStyles(c: Palette) {
     check: {
       fontSize: 18,
       fontWeight: '800',
+      color: c.accent,
+    },
+    linkText: {
+      fontSize: 16,
+      fontWeight: '700',
       color: c.accent,
     },
     swatch: {

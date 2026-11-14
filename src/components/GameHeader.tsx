@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/engine';
@@ -69,6 +69,7 @@ export function GameHeader({ width }: Props) {
 
   return (
     <View style={[styles.header, { width }]}>
+      <Image source={require('../../assets/logo.png')} style={styles.logo} accessibilityLabel="Sudoku logo" />
       <Text style={styles.title}>Sudoku</Text>
       <Text style={styles.status} accessibilityLiveRegion="polite">
         {status}
@@ -137,6 +138,10 @@ function makeStyles(c: Palette) {
     header: {
       alignItems: 'center',
       gap: 8,
+    },
+    logo: {
+      width: 56,
+      height: 56,
     },
     title: {
       fontSize: 30,

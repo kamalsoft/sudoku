@@ -35,3 +35,12 @@ export function unitLabel(u: number): string {
   if (u < 18) return `Column ${u - 8}`;
   return `Block ${u - 17}`;
 }
+
+// Kid-safe mode: mistakes never end a game and timed games are off. Settings keeps the stored choices.
+export function guardedMistakeLimit(kidSafe: boolean, limit: number | null): number | null {
+  return kidSafe ? null : limit;
+}
+
+export function guardedTimeLimit(kidSafe: boolean, limit: number | null): number | null {
+  return kidSafe ? null : limit;
+}

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/engine';
 import { elapsedMs, remainingMs } from '../sudoku/session';
+import { guardedMistakeLimit, guardedTimeLimit } from '../sudoku/rules';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
@@ -37,13 +38,14 @@ export function GameHeader({ width }: Props) {
   const accumulated = useGameStore((s) => s.accumulatedMs);
   const runningSince = useGameStore((s) => s.runningSince);
   const newGame = useGameStore((s) => s.newGame);
-  const timeLimitMs = useGameStore((s) => s.timeLimitMs);
+  const kidSafe = usePrefs((s) => s.kidSafe);
+  const timeLimitMs = guardedTimeLimit(kidSafe, useGameStore((s) => s.timeLimitMs));
   const failed = useGameStore((s) => s.failed);
   const mistakes = useGameStore((s) => s.mistakes);
   const daily = useGameStore((s) => s.daily);
   const startDaily = useGameStore((s) => s.startDaily);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
-  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
+  const mistakeLimit = guardedMistakeLimit(kidSafe, usePrefs((s) => s.mistakeLimit));
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -98,7 +100,7 @@ export function GameHeader({ width }: Props) {
         })}
       </View>
 
-      <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
+      <View style={[styles.row, kidSafe && styles.dimmed]} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
         {TIME_LIMITS.map((t) => {
           const active = t.value === timeLimitMs;
           return (
@@ -106,6 +108,7 @@ export function GameHeader({ width }: Props) {
               key={t.label}
               accessibilityRole="radio"
               aria-checked={active}
+              disabled={kidSafe}
               onPress={() => setTimeLimit(t.value)}
               style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
             >
@@ -153,6 +156,9 @@ function makeStyles(c: Palette) {
       color: c.muted,
       fontVariant: ['tabular-nums'],
       textAlign: 'center',
+    },
+    dimmed: {
+      opacity: 0.45,
     },
     row: {
       alignSelf: 'stretch',

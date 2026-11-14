@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '../components/CelebrationOverlay';
+import { AnimalFriends } from '../components/AnimalFriends';
 import { CompletionToast } from '../components/CompletionToast';
 import { GameHeader } from '../components/GameHeader';
 import { NumberPad } from '../components/NumberPad';
@@ -54,6 +55,7 @@ function GameScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AnimalFriends />
       {wide ? (
         <View style={styles.wideRow}>
           <Animated.View style={gridIn}>

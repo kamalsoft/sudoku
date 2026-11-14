@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { completedUnits, dailySeed, isMistake, markErrors, outOfMistakes, unitLabel } from './rules.ts';
+import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isMistake, markErrors, outOfMistakes, unitLabel } from './rules.ts';
 import { createRng, generatePuzzle } from './engine.ts';
 
 test('the daily seed is stable for a day and differs between days', () => {
@@ -52,4 +52,11 @@ test('unitLabel names rows, columns and blocks from 1', () => {
   assert.equal(unitLabel(8), 'Row 9');
   assert.equal(unitLabel(9), 'Column 1');
   assert.equal(unitLabel(26), 'Block 9');
+});
+
+test('kid-safe mode turns off mistake and time limits without changing the stored choice', () => {
+  assert.equal(guardedMistakeLimit(true, 3), null);
+  assert.equal(guardedMistakeLimit(false, 3), 3);
+  assert.equal(guardedTimeLimit(true, 300_000), null);
+  assert.equal(guardedTimeLimit(false, 300_000), 300_000);
 });

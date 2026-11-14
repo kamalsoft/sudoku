@@ -7,7 +7,7 @@ import { applyDigit, applyErase, effectiveMode, fillCandidates, removeFromPeers 
 import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
-import { completedUnits, dailySeed, isMistake, markErrors, outOfMistakes } from './rules';
+import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
 import { feedback } from '../feedback';
@@ -261,7 +261,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (mode !== 'enter' || get().solved) return;
       if (wrong) {
         shake(selected);
-        if (outOfMistakes(get().mistakes, usePrefs.getState().mistakeLimit)) fail('mistakes', elapsedNow());
+        if (outOfMistakes(get().mistakes, guardedMistakeLimit(prefs.kidSafe, prefs.mistakeLimit))) fail('mistakes', elapsedNow());
         else feedback('error');
       } else if (get().errors[selected]) {
         shake(selected);
@@ -316,7 +316,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         ...gameFrom(difficulty, daily),
         ready: true,
         difficulty,
-        timeLimitMs,
+        timeLimitMs: guardedTimeLimit(usePrefs.getState().kidSafe, timeLimitMs),
         mistakes: 0,
         failed: null,
         daily,
@@ -342,12 +342,14 @@ export const useGameStore = create<GameState>()((set, get) => {
     tick: () => {
       const s = get();
       if (!s.ready || isOver(s)) return;
-      if (outOfMistakes(s.mistakes, usePrefs.getState().mistakeLimit)) {
+      const prefs = usePrefs.getState();
+      if (outOfMistakes(s.mistakes, guardedMistakeLimit(prefs.kidSafe, prefs.mistakeLimit))) {
         fail('mistakes', elapsedNow());
         return;
       }
-      if (s.timeLimitMs === null || remainingMs(s.timeLimitMs, elapsedNow()) > 0) return;
-      fail('time', s.timeLimitMs);
+      const limit = guardedTimeLimit(prefs.kidSafe, s.timeLimitMs);
+      if (limit === null || remainingMs(limit, elapsedNow()) > 0) return;
+      fail('time', limit);
     },
 
     pause: () => {

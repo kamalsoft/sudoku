@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
+import { ANIMALS } from '../components/AnimalFriends';
 import { useInstall } from '../install';
 import { THEME_NAMES, THEMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
@@ -36,6 +37,8 @@ export default function SettingsScreen() {
   const sound = usePrefs((s) => s.sound);
   const haptics = usePrefs((s) => s.haptics);
   const update = usePrefs((s) => s.update);
+  const kidSafe = usePrefs((s) => s.kidSafe);
+  const animals = usePrefs((s) => s.animals);
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const { canInstall, installed, ios, promptInstall } = useInstall();
 
@@ -79,7 +82,7 @@ export default function SettingsScreen() {
           title="Gameplay"
           footer="Casual never ends a game. In a capped game, a wrong digit counts as a mistake, and reaching the limit ends it."
         >
-          <View style={styles.rowPlain}>
+          <View style={[styles.rowPlain, kidSafe && styles.disabled]} pointerEvents={kidSafe ? 'none' : 'auto'}>
             <Text style={[styles.label, styles.labelGrow]}>Mistake limit</Text>
             <Segmented styles={styles} c={c} options={MISTAKE_LIMITS} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
           </View>
@@ -93,6 +96,34 @@ export default function SettingsScreen() {
             last
             onChange={(v) => update('autoNotes', v)}
           />
+        </Group>
+
+        <Group
+          title="Kids"
+          footer={kidSafe ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.' : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.'}
+        >
+          <ToggleRow styles={styles} c={c} label="Kid-safe mode" value={kidSafe} onChange={(v) => update('kidSafe', v)} />
+          <View style={styles.animalRow}>
+            <Text style={styles.label}>Animal friends</Text>
+            <View style={styles.animalChips} accessibilityRole="radiogroup">
+              {ANIMALS.map((a) => {
+                const on = animals.includes(a.id);
+                return (
+                  <Pressable
+                    key={a.id}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={a.name}
+                    aria-checked={on}
+                    onPress={() => update('animals', on ? animals.filter((x) => x !== a.id) : [...animals, a.id])}
+                    style={[styles.animalChip, on && { backgroundColor: c.accent, borderColor: c.accent }]}
+                  >
+                    <Text style={styles.animalEmoji}>{a.emoji}</Text>
+                    <Text style={[styles.animalName, { color: on ? c.onAccent : c.text }]}>{a.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </Group>
 
         <Group title="Feedback" footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>
@@ -403,6 +434,35 @@ function makeStyles(c: Palette) {
     },
     thumbOn: {
       alignSelf: 'flex-end',
+    },
+    animalRow: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+    },
+    animalChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    animalChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: c.radius,
+      borderWidth: 1,
+      borderColor: c.line,
+    },
+    animalEmoji: {
+      fontSize: 18,
+    },
+    animalName: {
+      fontSize: 14,
+      fontWeight: '600',
     },
   });
 }

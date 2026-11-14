@@ -11,6 +11,10 @@ interface Prefs {
   autoNotes: boolean;
   // Mistakes that end a game. null is casual mode: mistakes are counted but never end the game.
   mistakeLimit: number | null;
+  // Gentle play: mistakes never end a game and timed games are off.
+  kidSafe: boolean;
+  // Animal friends that walk across the game screen, by id from AnimalFriends.
+  animals: string[];
 }
 
 interface PrefsState extends Prefs {
@@ -19,7 +23,16 @@ interface PrefsState extends Prefs {
   update: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
 }
 
-const DEFAULTS: Prefs = { theme: 'light', haptics: true, sound: true, notes: true, autoNotes: false, mistakeLimit: null };
+const DEFAULTS: Prefs = {
+  theme: 'light',
+  haptics: true,
+  sound: true,
+  notes: true,
+  autoNotes: false,
+  mistakeLimit: null,
+  kidSafe: false,
+  animals: [],
+};
 
 export const usePrefs = create<PrefsState>()((set) => ({
   ...DEFAULTS,

@@ -2,9 +2,10 @@ import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html
 import type { PropsWithChildren } from 'react';
 
 // The HTML shell for the web build: the page title, icons, manifest and install metadata.
-// EXPO_BASE_URL is the sub-path the site is served from (/sudoku on GitHub Pages).
+// The site is served from a sub-path on GitHub Pages (/sudoku), so production links include it.
 export default function Root({ children }: PropsWithChildren) {
-  const base = process.env.EXPO_BASE_URL ?? '';
+  // The base path applies to the production build only; the dev server serves public/ from the root.
+  const base = process.env.NODE_ENV === 'production' ? (process.env.EXPO_BASE_URL ?? '') : '';
   // headNodes and bodyNodes carry the bundle scripts and framework markup; the page does not load without them.
   const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } = useServerDocumentContext();
   return (

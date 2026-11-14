@@ -5,6 +5,9 @@ import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/engine';
 import { elapsedMs, remainingMs } from '../sudoku/session';
 import { guardedMistakeLimit, guardedTimeLimit } from '../sudoku/rules';
+import { unlockedLevels } from '../sudoku/progress';
+import { askGrownUp } from '../gate';
+import { useProgress } from '../sudoku/progressStore';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
@@ -46,6 +49,9 @@ export function GameHeader({ width }: Props) {
   const startDaily = useGameStore((s) => s.startDaily);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
   const mistakeLimit = guardedMistakeLimit(kidSafe, usePrefs((s) => s.mistakeLimit));
+  const levelUp = usePrefs((s) => s.levelUp);
+  const games = useProgress((s) => s.games);
+  const open = unlockedLevels(games, levelUp);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -86,15 +92,19 @@ export function GameHeader({ width }: Props) {
       <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Difficulty">
         {DIFFICULTIES.map((d) => {
           const active = d.value === difficulty;
+          const locked = !open.includes(d.value);
           return (
             <Pressable
               key={d.value}
               accessibilityRole="radio"
+              accessibilityLabel={locked ? `${d.label}, locked` : d.label}
               aria-checked={active}
+              aria-disabled={locked}
+              disabled={locked}
               onPress={() => newGame(d.value)}
               style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.label}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive, locked && styles.locked]}>{locked ? `🔒 ${d.label}` : d.label}</Text>
             </Pressable>
           );
         })}
@@ -128,7 +138,7 @@ export function GameHeader({ width }: Props) {
         <Pressable accessibilityRole="button" onPress={() => router.push('/stats')} style={styles.actionOutline}>
           <Text style={styles.actionOutlineText}>Stats</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/settings')} style={styles.actionOutline}>
+        <Pressable accessibilityRole="button" onPress={() => askGrownUp(() => router.push('/settings'))} style={styles.actionOutline}>
           <Text style={styles.actionOutlineText}>Settings</Text>
         </Pressable>
       </View>
@@ -173,6 +183,9 @@ function makeStyles(c: Palette) {
       borderWidth: 2,
       borderColor: c.line,
       backgroundColor: c.surface,
+    },
+    locked: {
+      opacity: 0.5,
     },
     chipActive: {
       backgroundColor: c.accent,

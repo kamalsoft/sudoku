@@ -6,6 +6,11 @@ export interface GameRecord {
   elapsedMs: number;
   day: string; // local calendar day, YYYY-MM-DD
   daily?: boolean;
+  puzzle?: string; // 81 characters, 0 for empty; lets the game be replayed
+  mistakes?: number;
+  hints?: number;
+  stars?: number;
+  at?: string; // ISO time the game ended
 }
 
 export interface DifficultyStats {

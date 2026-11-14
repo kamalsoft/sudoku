@@ -39,5 +39,16 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       `);
     });
   }
+  if (current < 3) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        ALTER TABLE game_history ADD COLUMN puzzle TEXT;
+        ALTER TABLE game_history ADD COLUMN mistakes INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE game_history ADD COLUMN hints INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE game_history ADD COLUMN stars INTEGER NOT NULL DEFAULT 0;
+        PRAGMA user_version = 3;
+      `);
+    });
+  }
   return db;
 }

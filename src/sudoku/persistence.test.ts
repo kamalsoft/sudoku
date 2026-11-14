@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { elapsedMs, parseSession, remainingMs } from './session.ts';
 import { dayKey, formatDuration, streakAt, summarize } from './stats.ts';
+import { CLUE_TARGETS } from './engine.ts';
 import type { GameRecord } from './stats.ts';
 
 function validSession() {
@@ -103,4 +104,13 @@ test('parseSession keeps saved undo steps and rejects malformed ones', () => {
   const ok = parseSession(JSON.stringify({ ...validSession(), history: { past: [board], future: [] } }));
   assert.equal(ok?.history?.past.length, 1);
   assert.equal(parseSession(JSON.stringify({ ...validSession(), history: { past: [{ values: [1] }], future: [] } })), null);
+});
+
+test('solvePuzzle returns the full solution of a generated puzzle', async () => {
+  const { solvePuzzle, generatePuzzle, createRng, countSolutions } = await import('./engine.ts');
+  const { puzzle, solution } = generatePuzzle('medium', createRng(7));
+  assert.equal(countSolutions(puzzle, 2), 1);
+  assert.deepEqual(solvePuzzle(puzzle), solution);
+  assert.equal(solvePuzzle([1, 1, ...new Array<number>(79).fill(0)]), null);
+  assert.ok(CLUE_TARGETS.medium > 0);
 });

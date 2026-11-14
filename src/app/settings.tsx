@@ -19,6 +19,12 @@ const THEME_LABELS: Record<ThemeName, string> = {
   space: 'Space',
 };
 
+const HINT_LIMITS: { value: number | null; label: string }[] = [
+  { value: 3, label: '3' },
+  { value: 5, label: '5' },
+  { value: null, label: 'Unlimited' },
+];
+
 const MISTAKE_LIMITS: { value: number | null; label: string }[] = [
   { value: null, label: 'Casual' },
   { value: 3, label: '3' },
@@ -38,6 +44,14 @@ export default function SettingsScreen() {
   const haptics = usePrefs((s) => s.haptics);
   const update = usePrefs((s) => s.update);
   const kidSafe = usePrefs((s) => s.kidSafe);
+  const hints = usePrefs((s) => s.hints);
+  const hintLimit = usePrefs((s) => s.hintLimit);
+  const badges = usePrefs((s) => s.badges);
+  const levelUp = usePrefs((s) => s.levelUp);
+  const rewards = usePrefs((s) => s.rewards);
+  const parentLock = usePrefs((s) => s.parentLock);
+  const largeDigits = usePrefs((s) => s.largeDigits);
+  const colorBlind = usePrefs((s) => s.colorBlind);
   const animals = usePrefs((s) => s.animals);
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const { canInstall, installed, ios, promptInstall } = useInstall();
@@ -87,6 +101,19 @@ export default function SettingsScreen() {
             <Segmented styles={styles} c={c} options={MISTAKE_LIMITS} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
           </View>
           <ToggleRow styles={styles} c={c} label="Notes" value={notes} onChange={(v) => update('notes', v)} />
+          <ToggleRow styles={styles} c={c} label="Hints" value={hints} onChange={(v) => update('hints', v)} />
+          <View style={styles.rowPlain}>
+            <Text style={[styles.label, styles.labelGrow]}>Hints per game</Text>
+            <Segmented styles={styles} c={c} options={HINT_LIMITS} value={hintLimit} onChange={(v) => update('hintLimit', v)} />
+          </View>
+          <ToggleRow styles={styles} c={c} label="Stars and badges" value={badges} onChange={(v) => update('badges', v)} />
+          <ToggleRow
+            styles={styles}
+            c={c}
+            label="Level up"
+            value={levelUp}
+            onChange={(v) => update('levelUp', v)}
+          />
           <ToggleRow
             styles={styles}
             c={c}
@@ -103,6 +130,8 @@ export default function SettingsScreen() {
           footer={kidSafe ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.' : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.'}
         >
           <ToggleRow styles={styles} c={c} label="Kid-safe mode" value={kidSafe} onChange={(v) => update('kidSafe', v)} />
+          <ToggleRow styles={styles} c={c} label="Rewards with animal friends" value={rewards} onChange={(v) => update('rewards', v)} />
+          <ToggleRow styles={styles} c={c} label="Parent lock" value={parentLock} onChange={(v) => update('parentLock', v)} />
           <View style={styles.animalRow}>
             <Text style={styles.label}>Animal friends</Text>
             <View style={styles.animalChips} accessibilityRole="radiogroup">
@@ -124,6 +153,11 @@ export default function SettingsScreen() {
               })}
             </View>
           </View>
+        </Group>
+
+        <Group title="Comfort" footer="Bigger digits, and colour-blind markers: a ! for wrong cells and a diamond for matching numbers.">
+          <ToggleRow styles={styles} c={c} label="Large digits" value={largeDigits} onChange={(v) => update('largeDigits', v)} />
+          <ToggleRow styles={styles} c={c} label="Colour-blind friendly" value={colorBlind} last onChange={(v) => update('colorBlind', v)} />
         </Group>
 
         <Group title="Feedback" footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>

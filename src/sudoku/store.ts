@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CLUE_TARGETS, UNITS, createBoard, createRng, findConflicts, generatePuzzle, isSolved } from './engine';
+import { CLUE_TARGETS, UNITS, createBoard, createRng, findConflicts, generatePuzzle, isSolved, solvePuzzle } from './engine';
 import type { BoardState, Difficulty } from './engine';
 import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from './history';
 import type { History } from './history';
@@ -9,7 +9,10 @@ import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './ses
 import type { SessionRecord } from './session';
 import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
+import type { GameRecord } from './stats';
+import { starsFor } from './progress';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
+import { useProgress } from './progressStore';
 import { feedback } from '../feedback';
 import { usePrefs } from '../prefs';
 
@@ -31,6 +34,8 @@ interface GameState {
   difficulty: Difficulty;
   board: BoardState;
   solution: number[];
+  // The puzzle as it was dealt: 81 characters, 0 for empty. Kept so the game can be replayed.
+  puzzle: string;
   // Cells in error: duplicates and wrong digits.
   errors: boolean[];
   selected: number | null;
@@ -44,6 +49,7 @@ interface GameState {
   gameId: number;
   timeLimitMs: number | null;
   mistakes: number;
+  hints: number;
   // Why the game ended without a win, if it did.
   failed: FailReason | null;
   // Local day of the daily challenge being played, or null for a normal game.
@@ -55,9 +61,11 @@ interface GameState {
   inputDigit: (digit: number) => void;
   clearSelected: () => void;
   fillNotes: () => void;
+  useHint: () => void;
   undo: () => void;
   redo: () => void;
   newGame: (difficulty: Difficulty, timeLimitMs?: number | null, daily?: string | null) => void;
+  replay: (puzzle: string, difficulty: Difficulty) => void;
   startDaily: () => void;
   setTimeLimit: (timeLimitMs: number | null) => void;
   tick: () => void;
@@ -73,10 +81,29 @@ function enqueue(task: () => Promise<unknown>) {
 
 let initializing: Promise<void> | null = null;
 
-function gameFrom(difficulty: Difficulty, daily: string | null) {
+// Saves a finished game, then refreshes the progress shown on the game and Stats screens.
+function recordAndRefresh(game: GameRecord) {
+  return recordGame(game).then(() => useProgress.getState().load());
+}
+
+interface Game {
+  board: BoardState;
+  solution: number[];
+  puzzle: string;
+  errors: boolean[];
+  solved: boolean;
+}
+
+function gameFrom(difficulty: Difficulty, daily: string | null): Game {
   const rng = daily === null ? Math.random : createRng(dailySeed(daily));
   const { puzzle, solution } = generatePuzzle(difficulty, rng);
-  return { board: createBoard(puzzle), solution, errors: markErrors(findConflicts(puzzle), puzzle, solution), solved: false };
+  return {
+    board: createBoard(puzzle),
+    solution,
+    puzzle: puzzle.join(''),
+    errors: markErrors(findConflicts(puzzle), puzzle, solution),
+    solved: false,
+  };
 }
 
 function hasProgress(board: BoardState): boolean {
@@ -99,6 +126,21 @@ function isDifficulty(value: unknown): value is Difficulty {
   return typeof value === 'string' && value in CLUE_TARGETS;
 }
 
+// The history row for a game that ended, won or not.
+function recordFor(s: GameState, won: boolean, elapsed: number): GameRecord {
+  return {
+    difficulty: s.difficulty,
+    won,
+    elapsedMs: elapsed,
+    day: dayKey(new Date()),
+    daily: s.daily !== null,
+    puzzle: s.puzzle,
+    mistakes: s.mistakes,
+    hints: s.hints,
+    stars: won ? starsFor(s.mistakes, s.hints) : 0,
+  };
+}
+
 export const useGameStore = create<GameState>()((set, get) => {
   const elapsedNow = () => {
     const s = get();
@@ -114,6 +156,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       accumulatedMs: elapsedNow(),
       timeLimitMs: s.timeLimitMs,
       mistakes: s.mistakes,
+      hints: s.hints,
+      puzzle: s.puzzle,
       daily: s.daily,
       history: {
         past: s.history.past.slice(-SAVED_HISTORY_STEPS),
@@ -127,14 +171,7 @@ export const useGameStore = create<GameState>()((set, get) => {
   const fail = (reason: FailReason, elapsed: number) => {
     const s = get();
     set({ failed: reason, accumulatedMs: elapsed, runningSince: null });
-    const game = {
-      difficulty: s.difficulty,
-      won: false,
-      elapsedMs: elapsed,
-      day: dayKey(new Date()),
-      daily: s.daily !== null,
-    };
-    enqueue(() => recordGame(game));
+    enqueue(() => recordAndRefresh(recordFor(s, false, elapsed)));
     enqueue(clearSession);
     feedback('error');
   };
@@ -155,14 +192,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     if (solved) {
       const elapsed = elapsedNow();
       set({ board, errors, solved, history, unitFlash, accumulatedMs: elapsed, runningSince: null });
-      const game = {
-        difficulty: s.difficulty,
-        won: true,
-        elapsedMs: elapsed,
-        day: dayKey(new Date()),
-        daily: s.daily !== null,
-      };
-      enqueue(() => recordGame(game));
+      enqueue(() => recordAndRefresh(recordFor(s, true, elapsed)));
       enqueue(clearSession);
       feedback('success');
       return;
@@ -176,11 +206,40 @@ export const useGameStore = create<GameState>()((set, get) => {
     set({ shake: { index, nonce: (get().shake?.nonce ?? 0) + 1 } });
   };
 
+  // Starts a game from a dealt puzzle. The unfinished game before it is recorded as not won.
+  const begin = (game: Game, difficulty: Difficulty, timeLimitMs: number | null, daily: string | null) => {
+    const s = get();
+    if (s.ready && !isOver(s) && hasProgress(s.board)) {
+      enqueue(() => recordAndRefresh(recordFor(s, false, elapsedNow())));
+    }
+    set({
+      ...game,
+      ready: true,
+      difficulty,
+      timeLimitMs: guardedTimeLimit(usePrefs.getState().kidSafe, timeLimitMs),
+      mistakes: 0,
+      hints: 0,
+      failed: null,
+      daily,
+      selected: null,
+      mode: 'enter',
+      accumulatedMs: 0,
+      runningSince: Date.now(),
+      history: emptyHistory,
+      shake: null,
+      gameId: s.gameId + 1,
+    });
+    enqueue(() => setSetting('difficulty', difficulty));
+    enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
+    save();
+  };
+
   return {
     ready: false,
     difficulty: 'medium',
     board: createBoard(new Array<number>(81).fill(0)),
     solution: new Array<number>(81).fill(0),
+    puzzle: '',
     errors: new Array<boolean>(81).fill(false),
     selected: null,
     mode: 'enter',
@@ -193,6 +252,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     gameId: 0,
     timeLimitMs: null,
     mistakes: 0,
+    hints: 0,
     failed: null,
     daily: null,
 
@@ -210,6 +270,7 @@ export const useGameStore = create<GameState>()((set, get) => {
             difficulty: session.difficulty,
             board: session.board,
             solution: session.solution,
+            puzzle: session.puzzle ?? '',
             errors: markErrors(findConflicts(session.board.values), session.board.values, session.solution),
             solved: false,
             accumulatedMs: session.accumulatedMs,
@@ -220,12 +281,14 @@ export const useGameStore = create<GameState>()((set, get) => {
             gameId: get().gameId + 1,
             timeLimitMs: session.timeLimitMs ?? null,
             mistakes: session.mistakes ?? 0,
+            hints: session.hints ?? 0,
             failed: null,
             daily: session.daily ?? null,
           });
         } else {
           get().newGame(isDifficulty(savedDifficulty) ? savedDifficulty : 'medium', parseTimeLimit(savedLimit));
         }
+        void useProgress.getState().load();
       })();
       return initializing;
     },
@@ -282,6 +345,21 @@ export const useGameStore = create<GameState>()((set, get) => {
       commit(fillCandidates(get().board));
     },
 
+    // Fills the selected empty cell (or the first empty one) with its correct digit. A hint is not a mistake,
+    // but it lowers the stars for the game.
+    useHint: () => {
+      const s = get();
+      const prefs = usePrefs.getState();
+      if (!prefs.hints || isOver(s)) return;
+      if (prefs.hintLimit !== null && s.hints >= prefs.hintLimit) return;
+      const selectedEmpty = s.selected !== null && s.board.values[s.selected] === 0 && !s.board.givens[s.selected];
+      const target = selectedEmpty ? s.selected! : s.board.values.findIndex((v) => v === 0);
+      if (target < 0) return;
+      set({ selected: target, hints: s.hints + 1 });
+      commit(applyDigit(get().board, target, 'enter', s.solution[target]));
+      feedback('tick');
+    },
+
     undo: () => {
       const s = get();
       if (isOver(s)) return;
@@ -301,36 +379,26 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     newGame: (difficulty, timeLimitMs = get().timeLimitMs, daily = null) => {
-      const s = get();
-      if (s.ready && !isOver(s) && hasProgress(s.board)) {
-        const game = {
-          difficulty: s.difficulty,
-          won: false,
-          elapsedMs: elapsedNow(),
-          day: dayKey(new Date()),
-          daily: s.daily !== null,
-        };
-        enqueue(() => recordGame(game));
-      }
-      set({
-        ...gameFrom(difficulty, daily),
-        ready: true,
+      begin(gameFrom(difficulty, daily), difficulty, timeLimitMs, daily);
+    },
+
+    // Starts a saved puzzle again. The solution is solved from the puzzle, so the saved record needs no answer key.
+    replay: (puzzle, difficulty) => {
+      const digits = puzzle.split('').map(Number);
+      const solution = solvePuzzle(digits);
+      if (!solution) return;
+      begin(
+        {
+          board: createBoard(digits),
+          solution,
+          puzzle,
+          errors: markErrors(findConflicts(digits), digits, solution),
+          solved: false,
+        },
         difficulty,
-        timeLimitMs: guardedTimeLimit(usePrefs.getState().kidSafe, timeLimitMs),
-        mistakes: 0,
-        failed: null,
-        daily,
-        selected: null,
-        mode: 'enter',
-        accumulatedMs: 0,
-        runningSince: Date.now(),
-        history: emptyHistory,
-        shake: null,
-        gameId: s.gameId + 1,
-      });
-      enqueue(() => setSetting('difficulty', difficulty));
-      enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
-      save();
+        get().timeLimitMs,
+        null,
+      );
     },
 
     startDaily: () => get().newGame('medium', get().timeLimitMs, dayKey(new Date())),

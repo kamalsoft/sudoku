@@ -5,6 +5,7 @@ import { UNITS } from '../sudoku/engine';
 import { cellTone } from '../sudoku/highlight';
 import { useGameStore } from '../sudoku/store';
 import { useReduceMotion } from '../motion';
+import { usePrefs } from '../prefs';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
@@ -17,6 +18,8 @@ export function SudokuCell({ index, size }: Props) {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const reduce = useReduceMotion();
+  const largeDigits = usePrefs((s) => s.largeDigits);
+  const colorBlind = usePrefs((s) => s.colorBlind);
   const select = useGameStore((s) => s.selectCell);
   const shakeNonce = useGameStore((s) => (s.shake?.index === index ? s.shake.nonce : 0));
   const gameId = useGameStore((s) => s.gameId);
@@ -108,8 +111,10 @@ export function SudokuCell({ index, size }: Props) {
       >
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.flash, opacity: anim.flash }]} />
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.success, opacity: anim.glow }]} />
+        {colorBlind && wrong ? <Text style={[styles.mark, styles.markWrong, { fontSize: size * 0.22 }]}>!</Text> : null}
+        {colorBlind && tone === 'same' ? <Text style={[styles.mark, styles.markSame, { fontSize: size * 0.2 }]}>◆</Text> : null}
         {value ? (
-          <Text style={[styles.value, { fontSize: size * 0.55, color: given ? c.given : wrong ? c.error : c.entry }]}>{value}</Text>
+          <Text style={[styles.value, { fontSize: size * 0.55 * (largeDigits ? 1.3 : 1), color: given ? c.given : wrong ? c.error : c.entry }]}>{value}</Text>
         ) : (
           <View style={styles.notes}>
             {Array.from({ length: 9 }, (_, n) => (
@@ -132,6 +137,21 @@ function makeStyles(c: Palette) {
     },
     value: {
       fontWeight: '600',
+    },
+    mark: {
+      position: 'absolute',
+      fontWeight: '800',
+      color: c.text,
+    },
+    markWrong: {
+      top: 1,
+      right: 3,
+      color: c.error,
+    },
+    markSame: {
+      top: 1,
+      left: 3,
+      color: c.accent,
     },
     notes: {
       width: '100%',

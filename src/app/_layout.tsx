@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { initPwa } from '../install';
+import { ParentGate } from '../components/ParentGate';
 import { useColors } from '../theme';
 
 export default function RootLayout() {
@@ -13,6 +14,7 @@ export default function RootLayout() {
     <>
       <StatusBar style={c.statusBar} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.background } }} />
+      <ParentGate />
     </>
   );
 }

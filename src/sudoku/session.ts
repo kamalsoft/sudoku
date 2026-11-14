@@ -7,6 +7,8 @@ export interface SessionRecord {
   accumulatedMs: number;
   timeLimitMs?: number | null;
   mistakes?: number;
+  hints?: number;
+  puzzle?: string;
   mistakeLimit?: number | null;
   daily?: string | null;
   // Undo and redo steps, kept across reloads. Only the most recent steps are saved.
@@ -49,6 +51,8 @@ export function parseSession(raw: string): SessionRecord | null {
     accumulatedMs >= 0 &&
     (data.timeLimitMs == null || (Number.isFinite(data.timeLimitMs) && data.timeLimitMs > 0)) &&
     (data.mistakes === undefined || (Number.isInteger(data.mistakes) && data.mistakes >= 0)) &&
+    (data.hints === undefined || (Number.isInteger(data.hints) && data.hints >= 0)) &&
+    (data.puzzle === undefined || (typeof data.puzzle === 'string' && data.puzzle.length === 81)) &&
     (data.mistakeLimit == null || (Number.isInteger(data.mistakeLimit) && data.mistakeLimit > 0)) &&
     (data.daily == null || typeof data.daily === 'string') &&
     (data.history === undefined ||

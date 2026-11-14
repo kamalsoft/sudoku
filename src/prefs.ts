@@ -13,6 +13,20 @@ interface Prefs {
   mistakeLimit: number | null;
   // Gentle play: mistakes never end a game and timed games are off.
   kidSafe: boolean;
+  // Hints: on/off, and how many per game (null is unlimited).
+  hints: boolean;
+  hintLimit: number | null;
+  // Stars and badges on the Stats screen.
+  badges: boolean;
+  // Level up: harder levels unlock after wins on the level before.
+  levelUp: boolean;
+  // Celebrations with the animal friends after a daily win or a new badge.
+  rewards: boolean;
+  // Comfort: bigger digits, and wrong or matching cells marked with more than colour.
+  largeDigits: boolean;
+  colorBlind: boolean;
+  // Settings ask a grown-up sum before opening.
+  parentLock: boolean;
   // Animal friends that walk across the game screen, by id from AnimalFriends.
   animals: string[];
 }
@@ -31,6 +45,14 @@ const DEFAULTS: Prefs = {
   autoNotes: false,
   mistakeLimit: null,
   kidSafe: false,
+  hints: true,
+  hintLimit: 3,
+  badges: true,
+  levelUp: false,
+  rewards: true,
+  largeDigits: false,
+  colorBlind: false,
+  parentLock: false,
   animals: [],
 };
 

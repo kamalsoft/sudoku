@@ -20,8 +20,14 @@ export function NumberPad({ width }: Props) {
   const setMode = useGameStore((s) => s.setMode);
   const inputDigit = useGameStore((s) => s.inputDigit);
   const clearSelected = useGameStore((s) => s.clearSelected);
+  const useHint = useGameStore((s) => s.useHint);
+  const hintsUsed = useGameStore((s) => s.hints);
+  const hintsOn = usePrefs((s) => s.hints);
+  const hintLimit = usePrefs((s) => s.hintLimit);
+  const hintsLeft = hintLimit === null ? null : Math.max(0, hintLimit - hintsUsed);
   const fillNotes = useGameStore((s) => s.fillNotes);
   const notes = usePrefs((s) => s.notes);
+  const largeDigits = usePrefs((s) => s.largeDigits);
   const gap = 8;
   const keySize = (width - gap * 2) / 3;
 
@@ -52,10 +58,22 @@ export function NumberPad({ width }: Props) {
             onPress={() => inputDigit(n + 1)}
             style={({ pressed }) => [styles.key, { width: keySize, height: keySize * 0.6, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
           >
-            <Text style={styles.keyText}>{n + 1}</Text>
+            <Text style={[styles.keyText, largeDigits && { fontSize: 31 }]}>{n + 1}</Text>
           </Pressable>
         ))}
       </View>
+      {hintsOn ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Hint"
+          accessibilityHint="Fills the selected empty cell with the right digit. It does not count as a mistake."
+          disabled={hintsLeft === 0}
+          onPress={useHint}
+          style={[styles.hint, hintsLeft === 0 && styles.disabled]}
+        >
+          <Text style={styles.toolText}>Hint{hintsLeft === null ? '' : ` · ${hintsLeft} left`}</Text>
+        </Pressable>
+      ) : null}
       <View style={[styles.row, { gap }]}>
         {notes ? pencilTool('pencil', 'Pencil') : null}
         <Pressable
@@ -117,6 +135,18 @@ function makeStyles(c: Palette) {
     },
     erasePressed: {
       backgroundColor: c.line,
+    },
+    hint: {
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: c.radius,
+      borderWidth: 2,
+      borderColor: c.accent,
+      backgroundColor: c.surface,
+    },
+    disabled: {
+      opacity: 0.4,
     },
     toolActive: {
       backgroundColor: c.accent,

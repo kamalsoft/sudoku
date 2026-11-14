@@ -224,3 +224,43 @@ export function createBoard(puzzle: number[]): BoardState {
     notes: new Array<number>(81).fill(0),
   };
 }
+
+// Returns the unique solution for a puzzle, or null when it has none (used to replay a saved puzzle).
+export function solvePuzzle(values: number[]): number[] | null {
+  // A puzzle with a duplicate digit has no solution, and searching for one would never finish.
+  if (findConflicts(values).some(Boolean)) return null;
+  const grid = values.slice();
+  const { rows, cols, boxes } = usedMasks(grid);
+  const search = (): boolean => {
+    let best = -1;
+    let bestMask = 0;
+    let bestCount = 10;
+    for (let i = 0; i < 81; i++) {
+      if (grid[i]) continue;
+      const mask = ~(rows[ROW[i]] | cols[COL[i]] | boxes[BOX[i]]) & 0x1ff;
+      const n = popcount(mask);
+      if (n < bestCount) {
+        best = i;
+        bestMask = mask;
+        bestCount = n;
+        if (n === 0) return false;
+      }
+    }
+    if (best === -1) return true;
+    for (let d = 1; d <= 9; d++) {
+      const bit = 1 << (d - 1);
+      if (!(bestMask & bit)) continue;
+      grid[best] = d;
+      rows[ROW[best]] |= bit;
+      cols[COL[best]] |= bit;
+      boxes[BOX[best]] |= bit;
+      if (search()) return true;
+      rows[ROW[best]] &= ~bit;
+      cols[COL[best]] &= ~bit;
+      boxes[BOX[best]] &= ~bit;
+      grid[best] = 0;
+    }
+    return false;
+  };
+  return search() ? grid : null;
+}

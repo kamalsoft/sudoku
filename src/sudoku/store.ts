@@ -5,7 +5,7 @@ import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from '
 import type { History } from './history';
 import { applyDigit, applyErase, fillCandidates, removeFromPeers } from './moves';
 import type { Mode } from './moves';
-import { elapsedMs, parseSession, remainingMs } from './session';
+import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
 import { dailySeed, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
@@ -110,6 +110,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       mistakes: s.mistakes,
       mistakeLimit: s.mistakeLimit,
       daily: s.daily,
+      history: {
+        past: s.history.past.slice(-SAVED_HISTORY_STEPS),
+        future: s.history.future.slice(-SAVED_HISTORY_STEPS),
+      },
     };
     enqueue(() => saveSession(session));
   };
@@ -203,7 +207,7 @@ export const useGameStore = create<GameState>()((set, get) => {
             runningSince: null,
             selected: null,
             mode: 'enter',
-            history: emptyHistory,
+            history: session.history ?? emptyHistory,
             gameId: get().gameId + 1,
             timeLimitMs: session.timeLimitMs ?? null,
             mistakeLimit: session.mistakeLimit ?? null,

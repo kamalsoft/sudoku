@@ -97,3 +97,10 @@ test('parseSession accepts a time limit or none, and rejects a bad one', () => {
   assert.ok(parseSession(JSON.stringify(validSession())), 'older sessions without a limit still load');
   assert.equal(parseSession(JSON.stringify({ ...validSession(), timeLimitMs: -5 })), null);
 });
+
+test('parseSession keeps saved undo steps and rejects malformed ones', () => {
+  const board = validSession().board;
+  const ok = parseSession(JSON.stringify({ ...validSession(), history: { past: [board], future: [] } }));
+  assert.equal(ok?.history?.past.length, 1);
+  assert.equal(parseSession(JSON.stringify({ ...validSession(), history: { past: [{ values: [1] }], future: [] } })), null);
+});

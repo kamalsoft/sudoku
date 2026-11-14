@@ -3,7 +3,7 @@ import { CLUE_TARGETS, createBoard, createRng, findConflicts, generatePuzzle, is
 import type { BoardState, Difficulty } from './engine';
 import { emptyHistory, recordChange, redo as redoStep, undo as undoStep } from './history';
 import type { History } from './history';
-import { applyDigit, applyErase, fillCandidates, removeFromPeers } from './moves';
+import { applyDigit, applyErase, effectiveMode, fillCandidates, removeFromPeers } from './moves';
 import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
@@ -36,7 +36,6 @@ interface GameState {
   shake: Shake | null;
   gameId: number;
   timeLimitMs: number | null;
-  mistakeLimit: number | null;
   mistakes: number;
   // Why the game ended without a win, if it did.
   failed: FailReason | null;
@@ -108,7 +107,6 @@ export const useGameStore = create<GameState>()((set, get) => {
       accumulatedMs: elapsedNow(),
       timeLimitMs: s.timeLimitMs,
       mistakes: s.mistakes,
-      mistakeLimit: s.mistakeLimit,
       daily: s.daily,
       history: {
         past: s.history.past.slice(-SAVED_HISTORY_STEPS),
@@ -182,7 +180,6 @@ export const useGameStore = create<GameState>()((set, get) => {
     shake: null,
     gameId: 0,
     timeLimitMs: null,
-    mistakeLimit: null,
     mistakes: 0,
     failed: null,
     daily: null,
@@ -210,7 +207,6 @@ export const useGameStore = create<GameState>()((set, get) => {
             history: session.history ?? emptyHistory,
             gameId: get().gameId + 1,
             timeLimitMs: session.timeLimitMs ?? null,
-            mistakeLimit: session.mistakeLimit ?? null,
             mistakes: session.mistakes ?? 0,
             failed: null,
             daily: session.daily ?? null,
@@ -235,14 +231,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       get().selectCell(row * 9 + col);
     },
 
-    setMode: (mode) => set({ mode }),
+    setMode: (mode) => set({ mode: effectiveMode(mode, usePrefs.getState().notes) }),
 
     inputDigit: (digit) => {
-      const { selected, mode, board } = get();
+      const { selected, board } = get();
+      const mode = effectiveMode(get().mode, usePrefs.getState().notes);
       if (selected === null || isOver(get())) return;
       let next = applyDigit(board, selected, mode, digit);
       if (next === board) return;
-      if (mode === 'enter' && usePrefs.getState().autoNotes) next = removeFromPeers(next, selected, digit);
+      const prefs = usePrefs.getState();
+      if (mode === 'enter' && prefs.notes && prefs.autoNotes) next = removeFromPeers(next, selected, digit);
 
       // Count the mistake before committing, so the saved session includes it.
       const wrong = mode === 'enter' && isMistake(get().solution, selected, digit);
@@ -252,7 +250,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (mode !== 'enter' || get().solved) return;
       if (wrong) {
         shake(selected);
-        if (outOfMistakes(get().mistakes, get().mistakeLimit)) fail('mistakes', elapsedNow());
+        if (outOfMistakes(get().mistakes, usePrefs.getState().mistakeLimit)) fail('mistakes', elapsedNow());
         else feedback('error');
       } else if (get().errors[selected]) {
         shake(selected);
@@ -269,7 +267,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     fillNotes: () => {
-      if (isOver(get())) return;
+      if (isOver(get()) || !usePrefs.getState().notes) return;
       commit(fillCandidates(get().board));
     },
 
@@ -308,7 +306,6 @@ export const useGameStore = create<GameState>()((set, get) => {
         ready: true,
         difficulty,
         timeLimitMs,
-        mistakeLimit: usePrefs.getState().mistakeLimit,
         mistakes: 0,
         failed: null,
         daily,
@@ -329,11 +326,16 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     setTimeLimit: (timeLimitMs) => get().newGame(get().difficulty, timeLimitMs, get().daily),
 
-    // Called every second by the header. Ends the game once the limit is used up.
+    // Called every second by the header. Ends the game once the time or the mistake limit is reached.
+    // The mistake limit is read live, so lowering it in Settings applies to the game in progress.
     tick: () => {
       const s = get();
-      if (!s.ready || s.timeLimitMs === null || isOver(s)) return;
-      if (remainingMs(s.timeLimitMs, elapsedNow()) > 0) return;
+      if (!s.ready || isOver(s)) return;
+      if (outOfMistakes(s.mistakes, usePrefs.getState().mistakeLimit)) {
+        fail('mistakes', elapsedNow());
+        return;
+      }
+      if (s.timeLimitMs === null || remainingMs(s.timeLimitMs, elapsedNow()) > 0) return;
       fail('time', s.timeLimitMs);
     },
 

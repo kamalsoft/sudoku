@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePrefs } from '../prefs';
 import { useGameStore } from '../sudoku/store';
 import type { Mode } from '../sudoku/moves';
 import { useColors } from '../theme';
@@ -8,11 +9,6 @@ import type { Palette } from '../theme';
 interface Props {
   width: number;
 }
-
-const MODES: { mode: Mode; label: string }[] = [
-  { mode: 'pencil', label: 'Pencil' },
-  { mode: 'erase', label: 'Erase' },
-];
 
 export function NumberPad({ width }: Props) {
   const c = useColors();
@@ -23,8 +19,15 @@ export function NumberPad({ width }: Props) {
   const fillNotes = useGameStore((s) => s.fillNotes);
   const undo = useGameStore((s) => s.undo);
   const redo = useGameStore((s) => s.redo);
+  const notes = usePrefs((s) => s.notes);
+  const update = usePrefs((s) => s.update);
   const gap = 8;
   const keySize = (width - gap * 2) / 3;
+
+  const toggleNotes = () => {
+    if (notes) setMode('enter');
+    update('notes', !notes);
+  };
 
   return (
     <View style={{ width, gap }}>
@@ -42,34 +45,66 @@ export function NumberPad({ width }: Props) {
         ))}
       </View>
       <View style={[styles.row, { gap }]}>
-        {MODES.map(({ mode: m, label }) => {
-          const active = mode === m;
-          return (
-            <Pressable
-              key={m}
-              accessibilityRole="button"
-              accessibilityLabel={`${label} mode`}
-              aria-pressed={active}
-              onPress={() => setMode(active ? 'enter' : m)}
-              style={[styles.modeKey, active && styles.modeKeyActive]}
-            >
-              <Text style={[styles.modeText, active && styles.modeTextActive]}>{label}</Text>
-            </Pressable>
-          );
-        })}
-        <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.modeKey}>
-          <Text style={styles.modeText}>Notes</Text>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityLabel="Notes"
+          aria-checked={notes}
+          onPress={toggleNotes}
+          style={[styles.modeKey, notes && styles.modeKeyActive]}
+        >
+          <Text style={[styles.modeText, notes && styles.modeTextActive]}>{notes ? 'Notes on' : 'Notes off'}</Text>
         </Pressable>
+        {notes ? <NotesControls mode={mode} setMode={setMode} fillNotes={fillNotes} styles={styles} /> : null}
       </View>
       <View style={[styles.row, { gap }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Undo" onPress={undo} style={styles.modeKey}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Undo" onPress={() => undo()} style={styles.modeKey}>
           <Text style={styles.modeText}>Undo</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Redo" onPress={redo} style={styles.modeKey}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Redo" onPress={() => redo()} style={styles.modeKey}>
           <Text style={styles.modeText}>Redo</Text>
         </Pressable>
       </View>
     </View>
+  );
+}
+
+// Pencil, Erase and Fill notes. Shown only while notes are on.
+function NotesControls({
+  mode,
+  setMode,
+  fillNotes,
+  styles,
+}: {
+  mode: Mode;
+  setMode: (mode: Mode) => void;
+  fillNotes: () => void;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const modes: { mode: Mode; label: string }[] = [
+    { mode: 'pencil', label: 'Pencil' },
+    { mode: 'erase', label: 'Erase' },
+  ];
+  return (
+    <>
+      {modes.map(({ mode: m, label }) => {
+        const active = mode === m;
+        return (
+          <Pressable
+            key={m}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} mode`}
+            aria-pressed={active}
+            onPress={() => setMode(active ? 'enter' : m)}
+            style={[styles.modeKey, active && styles.modeKeyActive]}
+          >
+            <Text style={[styles.modeText, active && styles.modeTextActive]}>{label}</Text>
+          </Pressable>
+        );
+      })}
+      <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.modeKey}>
+        <Text style={styles.modeText}>Fill notes</Text>
+      </Pressable>
+    </>
   );
 }
 
@@ -94,9 +129,11 @@ function makeStyles(c: Palette) {
     },
     row: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
     },
     modeKey: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: 0,
       alignItems: 'center',
       justifyContent: 'center',
       height: 44,

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const styles = useMemo(() => makeStyles(c), [c]);
   const theme = usePrefs((s) => s.theme);
   const haptics = usePrefs((s) => s.haptics);
+  const notes = usePrefs((s) => s.notes);
   const autoNotes = usePrefs((s) => s.autoNotes);
   const sound = usePrefs((s) => s.sound);
   const mistakeLimit = usePrefs((s) => s.mistakeLimit);
@@ -82,10 +83,19 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <ToggleRow
+            label="Notes"
+            hint="Pencil marks on the game screen. Turning them off hides the notes controls."
+            value={notes}
+            onChange={(v) => update('notes', v)}
+            styles={styles}
+            c={c}
+          />
+          <ToggleRow
             label="Auto-notes"
-            hint="Placing a digit removes it from the notes of cells in the same row, column and box."
+            hint={notes ? 'Placing a digit removes it from the notes of cells in the same row, column and box.' : 'Needs Notes to be on.'}
             value={autoNotes}
             onChange={(v) => update('autoNotes', v)}
+            disabled={!notes}
             styles={styles}
             c={c}
           />
@@ -116,6 +126,7 @@ function ToggleRow({
   hint,
   value,
   onChange,
+  disabled = false,
   styles,
   c,
 }: {
@@ -123,17 +134,28 @@ function ToggleRow({
   hint: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
   styles: ReturnType<typeof makeStyles>;
   c: Palette;
 }) {
   return (
-    <View style={styles.toggleRow}>
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      aria-checked={value}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onPress={() => onChange(!value)}
+      style={[styles.toggleRow, disabled && styles.disabled]}
+    >
       <View style={styles.toggleText}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.hint}>{hint}</Text>
       </View>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: c.accent }} accessibilityLabel={label} />
-    </View>
+      <View style={[styles.track, { backgroundColor: value ? c.accent : c.line }]}>
+        <View style={[styles.thumb, value && styles.thumbOn]} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -227,6 +249,25 @@ function makeStyles(c: Palette) {
     hint: {
       fontSize: 13,
       color: c.muted,
+    },
+    track: {
+      width: 46,
+      height: 26,
+      borderRadius: 13,
+      padding: 3,
+      justifyContent: 'center',
+    },
+    thumb: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: '#FFFFFF',
+    },
+    thumbOn: {
+      alignSelf: 'flex-end',
+    },
+    disabled: {
+      opacity: 0.5,
     },
   });
 }

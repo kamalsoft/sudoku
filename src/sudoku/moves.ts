@@ -2,6 +2,11 @@ import type { BoardState } from './engine';
 
 export type Mode = 'enter' | 'pencil' | 'erase';
 
+// With notes off there is no pencil mode, so the mode falls back to entering values.
+export function effectiveMode(mode: Mode, notesOn: boolean): Mode {
+  return mode === 'pencil' && !notesOn ? 'enter' : mode;
+}
+
 const row = (i: number) => Math.floor(i / 9);
 const col = (i: number) => i % 9;
 const box = (i: number) => Math.floor(row(i) / 3) * 3 + Math.floor(col(i) / 3);

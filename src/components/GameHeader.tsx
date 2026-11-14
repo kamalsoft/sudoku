@@ -5,6 +5,7 @@ import type { Difficulty } from '../sudoku/engine';
 import { elapsedMs, remainingMs } from '../sudoku/session';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
+import { usePrefs } from '../prefs';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
@@ -35,7 +36,7 @@ export function GameHeader() {
   const timeLimitMs = useGameStore((s) => s.timeLimitMs);
   const failed = useGameStore((s) => s.failed);
   const mistakes = useGameStore((s) => s.mistakes);
-  const mistakeLimit = useGameStore((s) => s.mistakeLimit);
+  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
   const daily = useGameStore((s) => s.daily);
   const startDaily = useGameStore((s) => s.startDaily);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);

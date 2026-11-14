@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDigit, applyErase } from './moves.ts';
+import { applyDigit, applyErase, effectiveMode } from './moves.ts';
 import { cellTone } from './highlight.ts';
 
 function board(overrides: { values?: number[]; givens?: number[] } = {}) {
@@ -55,4 +55,10 @@ test('cellTone applies selected > error > same > peer priority', () => {
   assert.equal(cellTone(values, conflicts, 0, 40), 'none');
   assert.equal(cellTone(values, conflicts, 0, 80), 'same');
   assert.equal(cellTone(values, conflicts, null, 9), 'none');
+});
+
+test('effectiveMode drops pencil when notes are off', () => {
+  assert.equal(effectiveMode('pencil', false), 'enter');
+  assert.equal(effectiveMode('pencil', true), 'pencil');
+  assert.equal(effectiveMode('erase', false), 'erase');
 });

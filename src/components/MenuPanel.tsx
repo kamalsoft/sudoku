@@ -49,6 +49,9 @@ export function MenuPanel() {
   const games = useProgress((s) => s.games);
   const open_ = unlockedLevels(games, levelUp);
   const activeName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
+  const profiles = useProfiles((s) => s.profiles);
+  const activeId = useProfiles((s) => s.activeId);
+  const switchTo = useProfiles((s) => s.switchTo);
 
   const install = useInstall();
 
@@ -70,6 +73,29 @@ export function MenuPanel() {
         <View style={styles.handle} />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
           <Text style={styles.playing}>{t('playing_as', { name: activeName })}</Text>
+
+          <Section title={t('choose_player')} styles={styles}>
+            <View style={styles.row} accessibilityRole="radiogroup">
+              {profiles.map((p) => {
+                const on = p.id === activeId;
+                return (
+                  <Pressable
+                    key={p.id}
+                    accessibilityRole="radio"
+                    accessibilityLabel={on ? `${p.name}, ${t('playing_now')}` : p.name}
+                    aria-checked={on}
+                    onPress={() => {
+                      hide();
+                      void switchTo(p.id);
+                    }}
+                    style={[styles.chip, on && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{on ? `✓ ${p.name}` : p.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Section>
 
           <Section title={t('level')} styles={styles}>
             <View style={styles.row} accessibilityRole="radiogroup">

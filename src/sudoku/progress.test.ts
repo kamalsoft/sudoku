@@ -57,3 +57,10 @@ test('weekSummary covers the last seven days, oldest first, and totals each day'
   assert.equal(week.find((d) => d.day === '2026-11-08')?.won, 1);
   assert.equal(week.some((d) => d.day === '2026-11-01'), false, 'older games are left out');
 });
+
+test('unqualified wins earn no level progress or badges', () => {
+  const assisted = { difficulty: 'easy' as const, won: true, elapsedMs: 1000, day: '2026-11-01', qualified: false };
+  assert.deepEqual(unlockedLevels([assisted, assisted, assisted], true), ['easy']);
+  const got = Object.fromEntries(badges([assisted], 0).map((b) => [b.id, b.unlocked]));
+  assert.equal(got['first-win'], false);
+});

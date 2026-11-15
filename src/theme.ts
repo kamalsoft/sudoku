@@ -1,6 +1,6 @@
 import { usePrefs } from './prefs';
 
-export type ThemeName = 'light' | 'dark' | 'oled' | 'sepia' | 'candy' | 'jungle' | 'space';
+export type ThemeName = 'light' | 'sepia' | 'dark' | 'oled' | 'candy' | 'sunshine' | 'ocean' | 'jungle' | 'space' | 'rainbow';
 
 export interface Palette {
   background: string;
@@ -184,6 +184,75 @@ export const THEMES: Record<ThemeName, Palette> = {
       error: 'rgba(251, 113, 133, 0.35)',
       same: 'rgba(253, 224, 71, 0.3)',
       peer: 'rgba(129, 140, 248, 0.2)',
+    },
+  },
+  sunshine: {
+    background: '#FFFBEB',
+    surface: '#FFFFFF',
+    text: '#422006',
+    given: '#451A03',
+    entry: '#EA580C',
+    error: '#DC2626',
+    line: '#FDE68A',
+    lineStrong: '#B45309',
+    muted: '#92400E',
+    accent: '#F59E0B',
+    onAccent: '#1F2937',
+    statusBar: 'dark',
+    radius: 16,
+    flash: 'rgba(220, 38, 38, 0.55)',
+    success: 'rgba(34, 197, 94, 0.5)',
+    tone: {
+      selected: 'rgba(245, 158, 11, 0.4)',
+      error: 'rgba(220, 38, 38, 0.22)',
+      same: 'rgba(251, 191, 36, 0.45)',
+      peer: 'rgba(253, 230, 138, 0.3)',
+    },
+  },
+  ocean: {
+    background: '#ECFEFF',
+    surface: '#FFFFFF',
+    text: '#164E63',
+    given: '#083344',
+    entry: '#0284C7',
+    error: '#E11D48',
+    line: '#A5F3FC',
+    lineStrong: '#0E7490',
+    muted: '#155E75',
+    accent: '#0891B2',
+    onAccent: '#FFFFFF',
+    statusBar: 'dark',
+    radius: 16,
+    flash: 'rgba(225, 29, 72, 0.5)',
+    success: 'rgba(20, 184, 166, 0.5)',
+    tone: {
+      selected: 'rgba(8, 145, 178, 0.35)',
+      error: 'rgba(225, 29, 72, 0.22)',
+      same: 'rgba(56, 189, 248, 0.3)',
+      peer: 'rgba(165, 243, 252, 0.35)',
+    },
+  },
+  rainbow: {
+    background: '#FDF4FF',
+    surface: '#FFFFFF',
+    text: '#3B0764',
+    given: '#3B0764',
+    entry: '#DB2777',
+    error: '#DC2626',
+    line: '#E9D5FF',
+    lineStrong: '#7C3AED',
+    muted: '#6B21A8',
+    accent: '#8B5CF6',
+    onAccent: '#FFFFFF',
+    statusBar: 'dark',
+    radius: 18,
+    flash: 'rgba(220, 38, 38, 0.5)',
+    success: 'rgba(34, 197, 94, 0.5)',
+    tone: {
+      selected: 'rgba(139, 92, 246, 0.35)',
+      error: 'rgba(220, 38, 38, 0.2)',
+      same: 'rgba(250, 204, 21, 0.4)',
+      peer: 'rgba(216, 180, 254, 0.3)',
     },
   },
 };

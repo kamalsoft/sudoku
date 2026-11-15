@@ -44,3 +44,11 @@ export function guardedMistakeLimit(kidSafe: boolean, limit: number | null): num
 export function guardedTimeLimit(kidSafe: boolean, limit: number | null): number | null {
   return kidSafe ? null : limit;
 }
+
+// A win is qualified (earns stars, badges, level and best-time credit) unless hints filled every empty square.
+// A puzzle saved without its puzzle text counts as qualified.
+export function hintsQualify(puzzle: string, hints: number): boolean {
+  if (!puzzle) return true;
+  const empties = puzzle.split('').filter((ch) => ch === '0').length;
+  return hints < empties;
+}

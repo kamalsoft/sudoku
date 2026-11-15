@@ -10,6 +10,7 @@ export interface GameRecord {
   mistakes?: number;
   hints?: number;
   stars?: number;
+  qualified?: boolean; // false when hints filled every empty square
   at?: string; // ISO time the game ended
 }
 
@@ -63,7 +64,10 @@ export function summarize(games: GameRecord[], today: string): Stats {
     row.played++;
     if (game.won) {
       row.won++;
-      row.bestMs = row.bestMs === null ? game.elapsedMs : Math.min(row.bestMs, game.elapsedMs);
+      // Only qualified wins set a best time.
+      if (game.qualified !== false) {
+        row.bestMs = row.bestMs === null ? game.elapsedMs : Math.min(row.bestMs, game.elapsedMs);
+      }
     }
   }
 
@@ -75,8 +79,8 @@ export function summarize(games: GameRecord[], today: string): Stats {
     winRate: played === 0 ? null : won / played,
     streak: streakAt(new Set(games.filter((g) => g.won).map((g) => g.day)), today),
     byDifficulty,
-    dailyWins: games.filter((g) => g.won && g.daily).length,
-    dailyStreak: streakAt(new Set(games.filter((g) => g.won && g.daily).map((g) => g.day)), today),
+    dailyWins: games.filter((g) => g.won && g.daily && g.qualified !== false).length,
+    dailyStreak: streakAt(new Set(games.filter((g) => g.won && g.daily && g.qualified !== false).map((g) => g.day)), today),
   };
 }
 

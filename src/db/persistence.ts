@@ -38,7 +38,7 @@ export async function recordGame(game: GameRecord): Promise<void> {
   const p = profile;
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at, daily, puzzle, mistakes, hints, stars, profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at, daily, puzzle, mistakes, hints, stars, profile, qualified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     game.difficulty,
     game.won ? 1 : 0,
     Math.round(game.elapsedMs),
@@ -50,6 +50,7 @@ export async function recordGame(game: GameRecord): Promise<void> {
     game.hints ?? 0,
     game.stars ?? 0,
     p,
+    game.qualified === false ? 0 : 1,
   );
 }
 
@@ -67,8 +68,9 @@ export async function loadGames(): Promise<GameRecord[]> {
     hints: number;
     stars: number;
     completed_at: string;
+    qualified: number;
   }>(
-    'SELECT difficulty, won, elapsed_ms, day, daily, puzzle, mistakes, hints, stars, completed_at FROM game_history WHERE profile = ? ORDER BY id',
+    'SELECT difficulty, won, elapsed_ms, day, daily, puzzle, mistakes, hints, stars, completed_at, qualified FROM game_history WHERE profile = ? ORDER BY id',
     p,
   );
   return rows.map((r) => ({
@@ -81,6 +83,7 @@ export async function loadGames(): Promise<GameRecord[]> {
     mistakes: r.mistakes,
     hints: r.hints,
     stars: r.stars,
+    qualified: r.qualified !== 0,
     at: r.completed_at,
   }));
 }

@@ -27,6 +27,7 @@ export default function HowToScreen() {
       <Heading>{t('howto_h3')}</Heading>
       <Bullet>{t('howto_b5')}</Bullet>
       <Bullet>{t('howto_b6')}</Bullet>
+      <Bullet>{t('howto_b7')}</Bullet>
       <Heading>{t('howto_h4')}</Heading>
       <Para>{t('howto_p2')}</Para>
       <Pressable accessibilityRole="button" onPress={replay} style={styles.button}>

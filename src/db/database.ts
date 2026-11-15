@@ -61,5 +61,13 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       `);
     });
   }
+  if (current < 5) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        ALTER TABLE game_history ADD COLUMN qualified INTEGER NOT NULL DEFAULT 1;
+        PRAGMA user_version = 5;
+      `);
+    });
+  }
   return db;
 }

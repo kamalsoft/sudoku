@@ -7,7 +7,7 @@ import { applyDigit, applyErase, effectiveMode, fillCandidates, removeFromPeers 
 import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
-import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isMistake, markErrors, outOfMistakes } from './rules';
+import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, hintsQualify, isMistake, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import type { GameRecord } from './stats';
 import { starsFor } from './progress';
@@ -134,6 +134,7 @@ function isDifficulty(value: unknown): value is Difficulty {
 
 // The history row for a game that ended, won or not.
 function recordFor(s: GameState, won: boolean, elapsed: number): GameRecord {
+  const qualified = hintsQualify(s.puzzle, s.hints);
   return {
     difficulty: s.difficulty,
     won,
@@ -143,7 +144,8 @@ function recordFor(s: GameState, won: boolean, elapsed: number): GameRecord {
     puzzle: s.puzzle,
     mistakes: s.mistakes,
     hints: s.hints,
-    stars: won ? starsFor(s.mistakes, s.hints) : 0,
+    qualified,
+    stars: won && qualified ? starsFor(s.mistakes, s.hints) : 0,
   };
 }
 

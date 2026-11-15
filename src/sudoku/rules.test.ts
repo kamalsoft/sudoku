@@ -60,3 +60,13 @@ test('kid-safe mode turns off mistake and time limits without changing the store
   assert.equal(guardedTimeLimit(true, 300_000), null);
   assert.equal(guardedTimeLimit(false, 300_000), 300_000);
 });
+
+test('a win is not qualified when hints filled every empty square', async () => {
+  const { hintsQualify } = await import('./rules.ts');
+  const puzzle = '1' + '0'.repeat(80);
+  assert.equal(hintsQualify(puzzle, 0), true);
+  assert.equal(hintsQualify(puzzle, 3), true, '79 empty squares, 3 hints');
+  assert.equal(hintsQualify('1'.repeat(81), 0), false, 'no empty squares left to hint: nothing to qualify');
+  assert.equal(hintsQualify('0'.repeat(3) + '1'.repeat(78), 3), false, 'three empty squares, three hints');
+  assert.equal(hintsQualify('', 99), true, 'saved without its puzzle text');
+});

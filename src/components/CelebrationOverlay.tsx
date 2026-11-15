@@ -3,6 +3,8 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { starsFor } from '../sudoku/progress';
+import { hintsQualify } from '../sudoku/rules';
+import { Confetti } from './Confetti';
 import { useProgress } from '../sudoku/progressStore';
 import { usePrefs } from '../prefs';
 import { ANIMALS } from './AnimalFriends';
@@ -31,7 +33,9 @@ export function CelebrationOverlay() {
   const unseen = useProgress((s) => s.unseenBadges);
   const earned = unseen.map((id) => t(`badge_${badgeKey(id)}` as StringKey));
   const parade = rewardsOn ? ANIMALS.filter((a) => animals.includes(a.id)) : [];
-  const stars = starsFor(mistakes, hints);
+  const puzzle = useGameStore((s) => s.puzzle);
+  const qualified = hintsQualify(puzzle, hints);
+  const stars = qualified ? starsFor(mistakes, hints) : 0;
   const newGame = useGameStore((s) => s.newGame);
   const [dismissedFor, setDismissedFor] = useState<number | null>(null);
   const [fade] = useState(() => new Animated.Value(0));
@@ -58,12 +62,14 @@ export function CelebrationOverlay() {
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fade }]} accessibilityViewIsModal>
+      <Confetti />
       <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
-        {badgesOn ? (
+        {badgesOn && qualified ? (
           <Text style={styles.stars} accessibilityLabel={t('stars_of', { n: stars })}>
             {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}
           </Text>
         ) : null}
+        {!qualified ? <Text style={styles.assisted}>{t('assisted_note')}</Text> : null}
         <Text style={styles.title}>{t('complete')}</Text>
         {daily !== null ? <Text style={styles.daily}>{t('daily_star')}</Text> : null}
         <Text style={styles.body}>
@@ -149,6 +155,12 @@ function makeStyles(c: Palette) {
       fontSize: 28,
       color: c.entry,
       letterSpacing: 6,
+    },
+    assisted: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.muted,
+      textAlign: 'center',
     },
     daily: {
       fontSize: 16,

@@ -7,20 +7,12 @@ import { usePrefs } from '../prefs';
 import { ANIMALS } from '../components/AnimalFriends';
 import { useProfiles } from '../profiles';
 import { LANGUAGES, useT } from '../i18n';
-import type { StringKey } from '../i18n';
 import { useInstall } from '../install';
-import { THEME_NAMES, THEMES, useColors } from '../theme';
-import type { Palette, ThemeName } from '../theme';
+import { useColors } from '../theme';
+import { SKIN_KEYS } from '../skins';
+import type { Palette } from '../theme';
 
-const THEME_KEYS: Record<ThemeName, StringKey> = {
-  light: 'theme_light',
-  dark: 'theme_dark',
-  oled: 'theme_oled',
-  sepia: 'theme_sepia',
-  candy: 'theme_candy',
-  jungle: 'theme_jungle',
-  space: 'theme_space',
-};
+
 
 const HINT_LIMITS: { value: number | null; label: string }[] = [
   { value: 3, label: '3' },
@@ -89,29 +81,10 @@ export default function SettingsScreen() {
             <Text style={[styles.label, styles.labelGrow]}>{t('row_language')}</Text>
             <Segmented styles={styles} c={c} options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))} value={language} onChange={(v) => update('language', v)} />
           </View>
-          {THEME_NAMES.map((name, i) => {
-            const active = name === theme;
-            const palette = THEMES[name];
-            return (
-              <Row
-                key={name}
-                styles={styles}
-                last={i === THEME_NAMES.length - 1}
-                label={t(THEME_KEYS[name])}
-                role="radio"
-                checked={active}
-                onPress={() => update('theme', name)}
-                leading={
-                  <View style={styles.swatch}>
-                    <View style={[styles.swatchPart, { backgroundColor: palette.background }]} />
-                    <View style={[styles.swatchPart, { backgroundColor: palette.accent }]} />
-                    <View style={[styles.swatchPart, { backgroundColor: palette.entry }]} />
-                  </View>
-                }
-                trailing={active ? <Text style={styles.check}>✓</Text> : null}
-              />
-            );
-          })}
+          <Pressable accessibilityRole="button" onPress={() => router.push('/skins')} style={styles.row}>
+            <Text style={[styles.label, styles.labelGrow]}>{t('row_skin')}</Text>
+            <Text style={styles.value}>{t(SKIN_KEYS[theme])} ›</Text>
+          </Pressable>
         </Group>
 
         <Group

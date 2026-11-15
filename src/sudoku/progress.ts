@@ -10,7 +10,7 @@ export function unlockedLevels(games: GameRecord[], levelUp: boolean): Difficult
   if (!levelUp) return LEVELS;
   const unlocked: Difficulty[] = ['easy'];
   for (let i = 0; i < LEVELS.length - 1; i++) {
-    const wins = games.filter((g) => g.won && !g.daily && g.difficulty === LEVELS[i]).length;
+    const wins = games.filter((g) => g.won && g.qualified !== false && !g.daily && g.difficulty === LEVELS[i]).length;
     if (wins < WINS_TO_UNLOCK) break;
     unlocked.push(LEVELS[i + 1]);
   }
@@ -31,10 +31,11 @@ export interface Badge {
 
 // Badges come from the saved history, so they are never lost and need no extra storage.
 export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
-  const wins = games.filter((g) => g.won).length;
-  const dailyWins = games.filter((g) => g.won && g.daily).length;
-  const hardWin = games.some((g) => g.won && ['hard', 'expert', 'evil'].includes(g.difficulty));
-  const flawless = games.some((g) => g.won && g.mistakes === 0);
+  const qualified = games.filter((g) => g.won && g.qualified !== false);
+  const wins = qualified.length;
+  const dailyWins = qualified.filter((g) => g.daily).length;
+  const hardWin = qualified.some((g) => ['hard', 'expert', 'evil'].includes(g.difficulty));
+  const flawless = qualified.some((g) => g.mistakes === 0);
   return [
     { id: 'first-win', title: 'First win', description: 'Finish your first puzzle.', unlocked: wins >= 1 },
     { id: 'five-wins', title: 'Five wins', description: 'Finish five puzzles.', unlocked: wins >= 5 },

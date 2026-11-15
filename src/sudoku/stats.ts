@@ -1,5 +1,7 @@
 import { LEVELS } from './levels.ts';
 import type { Difficulty } from './levels.ts';
+import { CHALLENGES } from '../challenges.ts';
+import { casualWinsOn } from './rules.ts';
 
 export interface GameRecord {
   difficulty: Difficulty;
@@ -23,12 +25,20 @@ export interface DifficultyStats {
   bestMs: number | null;
 }
 
+export interface ChallengeStats {
+  played: number;
+  won: number;
+  bestMs: number | null;
+}
+
 export interface Stats {
   played: number;
   won: number;
   winRate: number | null;
   streak: number;
   byDifficulty: Record<Difficulty, DifficultyStats>;
+  byChallenge: Record<string, ChallengeStats>;
+  casualToday: number;
   dailyWins: number;
   dailyStreak: number;
 }
@@ -74,6 +84,19 @@ export function summarize(games: GameRecord[], today: string): Stats {
     }
   }
 
+  const byChallenge = Object.fromEntries(
+    CHALLENGES.map((c) => [c.id, { played: 0, won: 0, bestMs: null } as ChallengeStats]),
+  ) as Record<string, ChallengeStats>;
+  for (const game of games) {
+    const row = game.challenge ? byChallenge[game.challenge] : undefined;
+    if (!row) continue;
+    row.played++;
+    if (game.won) {
+      row.won++;
+      if (game.qualified !== false) row.bestMs = row.bestMs === null ? game.elapsedMs : Math.min(row.bestMs, game.elapsedMs);
+    }
+  }
+
   const played = games.length;
   const won = games.filter((g) => g.won).length;
   return {
@@ -82,6 +105,8 @@ export function summarize(games: GameRecord[], today: string): Stats {
     winRate: played === 0 ? null : won / played,
     streak: streakAt(new Set(games.filter((g) => g.won).map((g) => g.day)), today),
     byDifficulty,
+    byChallenge,
+    casualToday: casualWinsOn(games, today),
     dailyWins: games.filter((g) => g.won && g.daily && g.qualified !== false).length,
     dailyStreak: streakAt(new Set(games.filter((g) => g.won && g.daily && g.qualified !== false).map((g) => g.day)), today),
   };

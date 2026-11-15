@@ -10,6 +10,8 @@ import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/levels.ts';
 import { badges as computeBadges } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
+import { CHALLENGES } from '../challenges';
+import { CASUAL_DAILY_WINS } from '../sudoku/rules';
 import { useGameStore } from '../sudoku/store';
 import { dayKey, formatDuration, summarize } from '../sudoku/stats';
 import type { GameRecord, Stats } from '../sudoku/stats';
@@ -64,6 +66,7 @@ export default function StatsScreen() {
               <Summary label={t('streak_days')} value={stats.streak} styles={styles} />
               <Summary label={t('daily_wins')} value={stats.dailyWins} styles={styles} />
               <Summary label={t('daily_streak')} value={stats.dailyStreak} styles={styles} />
+              <Summary label={t('casual_today')} value={stats.casualToday} suffix={` / ${CASUAL_DAILY_WINS}`} styles={styles} />
             </View>
 
             {badgesOn ? (
@@ -123,6 +126,29 @@ export default function StatsScreen() {
               </View>
             </View>
 
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('by_challenge')}</Text>
+              <View style={styles.table}>
+                <View style={[styles.row, styles.head]}>
+                  <Text style={[styles.nameCell, styles.headText]}>{t('challenges')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('played')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('won')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('best')}</Text>
+                </View>
+                {CHALLENGES.map((ch) => {
+                  const row = stats.byChallenge[ch.id];
+                  return (
+                    <View key={ch.id} style={styles.row}>
+                      <Text style={styles.nameCell}>{t(`challenge_${ch.id}` as StringKey)}</Text>
+                      <Text style={styles.cell}>{row.played}</Text>
+                      <Text style={styles.cell}>{row.won}</Text>
+                      <Text style={styles.cell}>{row.bestMs === null ? '—' : formatDuration(row.bestMs)}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
             <Pressable accessibilityRole="button" onPress={() => askGrownUp(() => router.push('/summary'))} style={styles.link}>
               <Text style={styles.linkText}>{t('parent_summary_link')}</Text>
             </Pressable>
@@ -143,11 +169,13 @@ function GameRow({ game, first, styles }: { game: GameRecord; first: boolean; st
   };
   const stars = game.won && game.stars ? '★'.repeat(game.stars) + '☆'.repeat(3 - game.stars) : '—';
   const level = t(LEVEL_KEYS[game.difficulty]);
+  const challengeName = game.challenge ? t(`challenge_${game.challenge}` as StringKey) : null;
   return (
     <View style={[styles.gameRow, !first && styles.divider]}>
       <View style={styles.gameText}>
         <Text style={styles.gameTitle}>
           {level}
+          {challengeName ? ` · ${challengeName}` : ''}
           {game.daily ? ` · ${t('daily')}` : ''}
         </Text>
         <Text style={styles.gameMeta}>
@@ -201,6 +229,7 @@ function makeStyles(c: Palette) {
     row: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: c.line },
     head: { borderTopWidth: 0, backgroundColor: c.background },
     cell: { flex: 1, color: c.text },
+    nameCell: { flex: 2, color: c.text },
     headText: { fontWeight: '600', color: c.muted },
     gameRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 12 },
     divider: { borderTopWidth: 1, borderTopColor: c.line },

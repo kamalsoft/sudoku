@@ -44,7 +44,7 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
     { id: 'daily-star', title: 'Daily star', description: 'Finish a daily challenge.', unlocked: dailyWins >= 1 },
     { id: 'daily-streak', title: 'Three-day streak', description: 'Finish a daily challenge three days in a row.', unlocked: dailyStreak >= 3 },
     { id: 'flawless', title: 'Flawless', description: 'Finish a puzzle with no mistakes.', unlocked: flawless },
-    { id: 'brave', title: 'Brave solver', description: 'Finish a Hard, Expert or Evil puzzle.', unlocked: hardWin },
+    { id: 'brave', title: 'Brave solver', description: 'Finish a Hard or harder puzzle.', unlocked: hardWin },
     { id: 'challenger', title: 'Challenger', description: 'Win a named challenge.', unlocked: challengeIds.size >= 1 },
     { id: 'mission-control', title: 'Mission Control', description: 'Win every named challenge.', unlocked: CHALLENGES.every((c) => challengeIds.has(c.id)) },
   ];

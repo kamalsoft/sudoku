@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getGlobalSetting, setGlobalSetting, setProfile } from './db/persistence';
+import { deleteProfileData, getGlobalSetting, setGlobalSetting, setProfile } from './db/persistence';
 import { usePrefs } from './prefs';
 import { useProgress } from './sudoku/progressStore';
 import { flushWrites, useGameStore } from './sudoku/store';
@@ -17,6 +17,8 @@ interface ProfilesState {
   load: () => Promise<void>;
   switchTo: (id: string) => Promise<void>;
   add: () => Promise<void>;
+  rename: (id: string, name: string) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 }
 
 function parseProfiles(raw: string | null): Profile[] {
@@ -53,6 +55,34 @@ export const useProfiles = create<ProfilesState>()((set, get) => ({
     await usePrefs.getState().load();
     await useProgress.getState().load();
     await useGameStore.getState().reload();
+  },
+
+  rename: async (id, name) => {
+    const trimmed = name.trim().slice(0, 20);
+    if (!trimmed) return;
+    const next = get().profiles.map((p) => (p.id === id ? { ...p, name: trimmed } : p));
+    await setGlobalSetting('profiles', JSON.stringify(next));
+    set({ profiles: next });
+  },
+
+  // Deletes a player and everything saved for them. The last remaining player cannot be deleted.
+  remove: async (id) => {
+    const { profiles, activeId } = get();
+    if (profiles.length <= 1 || !profiles.some((p) => p.id === id)) return;
+    await flushWrites();
+    const next = profiles.filter((p) => p.id !== id);
+    await setGlobalSetting('profiles', JSON.stringify(next));
+    await deleteProfileData(id);
+    set({ profiles: next });
+    if (id === activeId) {
+      const fallback = next[0].id;
+      setProfile(fallback);
+      await setGlobalSetting('activeProfile', fallback);
+      set({ activeId: fallback });
+      await usePrefs.getState().load();
+      await useProgress.getState().load();
+      await useGameStore.getState().reload();
+    }
   },
 
   add: async () => {

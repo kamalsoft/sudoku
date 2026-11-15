@@ -68,6 +68,12 @@ const STRINGS = {
     row_mistake_limit: 'Mistake limit',
     row_version: 'Version',
     add_player: '+ Add player',
+    playing_now: 'Playing now',
+    name_label: 'Player name',
+    delete_player: 'Delete player',
+    confirm_delete: 'Tap again to delete',
+    playing_as: 'Playing as {name}',
+    about: 'About this app',
   },
   es: {
     new_game: 'Nuevo juego',
@@ -129,6 +135,12 @@ const STRINGS = {
     row_mistake_limit: 'Límite de errores',
     row_version: 'Versión',
     add_player: '+ Añadir jugador',
+    playing_now: 'Jugando ahora',
+    name_label: 'Nombre del jugador',
+    delete_player: 'Eliminar jugador',
+    confirm_delete: 'Toca otra vez para eliminar',
+    playing_as: 'Jugando como {name}',
+    about: 'Acerca de la app',
   },
 } as const;
 

@@ -117,3 +117,18 @@ export async function setGlobalSetting(key: string, value: string): Promise<void
     value,
   );
 }
+
+// Removes everything saved for a profile: its games, its saved game and its settings.
+// The default profile keeps the original, unprefixed setting keys, so those are removed by elimination.
+export async function deleteProfileData(id: string): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM game_history WHERE profile = ?', id);
+    await db.runAsync('DELETE FROM profile_sessions WHERE profile = ?', id);
+    if (id === 'default') {
+      await db.runAsync("DELETE FROM user_settings WHERE key NOT LIKE '%:%' AND key NOT IN ('profiles', 'activeProfile')");
+    } else {
+      await db.runAsync('DELETE FROM user_settings WHERE key LIKE ?', `${id}:%`);
+    }
+  });
+}

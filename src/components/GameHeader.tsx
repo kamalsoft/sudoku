@@ -10,6 +10,7 @@ import { askGrownUp } from '../gate';
 import { useT } from '../i18n';
 import type { StringKey } from '../i18n';
 import { useProgress } from '../sudoku/progressStore';
+import { useProfiles } from '../profiles';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
@@ -53,6 +54,7 @@ export function GameHeader({ width }: Props) {
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
   const mistakeLimit = guardedMistakeLimit(kidSafe, usePrefs((s) => s.mistakeLimit));
   const levelUp = usePrefs((s) => s.levelUp);
+  const activeName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
   const games = useProgress((s) => s.games);
   const open = unlockedLevels(games, levelUp);
 
@@ -82,6 +84,7 @@ export function GameHeader({ width }: Props) {
     <View style={[styles.header, { width }]}>
       <Image source={require('../../assets/logo.png')} style={styles.logo} accessibilityLabel="Sudoku logo" />
       <Text style={styles.title}>Sudoku</Text>
+      <Text style={styles.playing}>{t('playing_as', { name: activeName })}</Text>
       <Text style={styles.status} accessibilityLiveRegion="polite">
         {status}
       </Text>
@@ -163,6 +166,11 @@ function makeStyles(c: Palette) {
       fontSize: 30,
       fontWeight: '800',
       color: c.text,
+    },
+    playing: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.accent,
     },
     status: {
       fontSize: 15,

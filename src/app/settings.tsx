@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,6 +52,10 @@ export default function SettingsScreen() {
   const activeProfile = useProfiles((s) => s.activeId);
   const switchProfile = useProfiles((s) => s.switchTo);
   const addProfile = useProfiles((s) => s.add);
+  const renameProfile = useProfiles((s) => s.rename);
+  const removeProfile = useProfiles((s) => s.remove);
+  const activeName = profiles.find((p) => p.id === activeProfile)?.name ?? '';
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const hints = usePrefs((s) => s.hints);
   const hintLimit = usePrefs((s) => s.hintLimit);
   const badges = usePrefs((s) => s.badges);
@@ -139,7 +143,14 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_kids')}
-          footer={kidSafe ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.' : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.'}
+          footer={[
+            kidSafe
+              ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.'
+              : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.',
+            parentLock
+              ? 'Parent lock is on: opening Settings or the parent summary asks a sum. A grown-up picks the right answer to continue.'
+              : 'Parent lock asks a grown-up a sum before Settings or the parent summary opens.',
+          ].join(' ')}
         >
           <ToggleRow styles={styles} c={c} label={t('row_kid_safe')} value={kidSafe} onChange={(v) => update('kidSafe', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_rewards')} value={rewards} onChange={(v) => update('rewards', v)} />
@@ -177,27 +188,46 @@ export default function SettingsScreen() {
           <ToggleRow styles={styles} c={c} label={t('row_haptics')} value={haptics} last onChange={(v) => update('haptics', v)} />
         </Group>
 
-        <Group title={t('group_players')} footer="Each player has their own games, stats and settings on this device.">
-          <View style={styles.animalRow}>
-            <View style={styles.animalChips} accessibilityRole="radiogroup">
-              {profiles.map((p) => {
-                const on = p.id === activeProfile;
-                return (
-                  <Pressable
-                    key={p.id}
-                    accessibilityRole="radio"
-                    accessibilityLabel={p.name}
-                    aria-checked={on}
-                    onPress={() => void switchProfile(p.id)}
-                    style={[styles.animalChip, on && { backgroundColor: c.accent, borderColor: c.accent }]}
-                  >
-                    <Text style={[styles.animalName, { color: on ? c.onAccent : c.text }]}>{p.name}</Text>
-                  </Pressable>
-                );
-              })}
-              <Pressable accessibilityRole="button" onPress={() => void addProfile()} style={styles.animalChip}>
-                <Text style={[styles.animalName, { color: c.accent }]}>{t('add_player')}</Text>
+        <Group title={t('group_players')} footer="Each player has their own games, stats and settings on this device. Renaming and deleting only affect the player you pick.">
+          <View style={styles.playerList} accessibilityRole="radiogroup">
+            {profiles.map((p, i) => {
+              const on = p.id === activeProfile;
+              return (
+                <Pressable
+                  key={p.id}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${p.name}${on ? ', playing now' : ''}`}
+                  aria-checked={on}
+                  onPress={() => void switchProfile(p.id)}
+                  style={[styles.playerRow, i < profiles.length - 1 && styles.divider]}
+                >
+                  <Text style={[styles.label, styles.labelGrow]}>{p.name}</Text>
+                  {on ? <Text style={styles.playing}>{t('playing_now')}</Text> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={styles.playerEdit}>
+            <Text style={styles.hint}>{t('name_label')}</Text>
+            <NameField key={activeProfile} initial={activeName} label={t('name_label')} onSave={(name) => void renameProfile(activeProfile, name)} c={c} styles={styles} />
+            <View style={styles.playerButtons}>
+              <Pressable accessibilityRole="button" onPress={() => void addProfile()} style={styles.playerButton}>
+                <Text style={styles.linkText}>{t('add_player')}</Text>
               </Pressable>
+              {profiles.length > 1 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={confirmDelete ? t('confirm_delete') : t('delete_player')}
+                  onPress={() => {
+                    if (!confirmDelete) return setConfirmDelete(true);
+                    setConfirmDelete(false);
+                    void removeProfile(activeProfile);
+                  }}
+                  style={styles.playerButton}
+                >
+                  <Text style={[styles.linkText, styles.danger]}>{confirmDelete ? t('confirm_delete') : t('delete_player')}</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </Group>
@@ -217,6 +247,10 @@ export default function SettingsScreen() {
               }
             />
           ) : null}
+          <Pressable accessibilityRole="button" onPress={() => router.push('/about')} style={[styles.row, styles.divider]}>
+            <Text style={[styles.label, styles.labelGrow]}>{t('about')}</Text>
+            <Text style={styles.linkText}>›</Text>
+          </Pressable>
           <Row styles={styles} label={t('row_version')} last trailing={<Text style={styles.value}>{version}</Text>} />
         </Group>
       </ScrollView>
@@ -277,6 +311,35 @@ function Row({
     >
       {content}
     </Pressable>
+  );
+}
+
+// The name of the player being edited. It is saved when the field loses focus or Return is pressed.
+function NameField({
+  initial,
+  label,
+  onSave,
+  c,
+  styles,
+}: {
+  initial: string;
+  label: string;
+  onSave: (name: string) => void;
+  c: Palette;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const [draft, setDraft] = useState(initial);
+  return (
+    <TextInput
+      value={draft}
+      onChangeText={setDraft}
+      onBlur={() => onSave(draft)}
+      onSubmitEditing={() => onSave(draft)}
+      maxLength={20}
+      selectTextOnFocus
+      accessibilityLabel={label}
+      style={[styles.nameInput, { color: c.text, borderColor: c.line, backgroundColor: c.background }]}
+    />
   );
 }
 
@@ -505,6 +568,49 @@ function makeStyles(c: Palette) {
     },
     thumbOn: {
       alignSelf: 'flex-end',
+    },
+    playerList: {
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+    },
+    playerRow: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    playing: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.accent,
+    },
+    playerEdit: {
+      padding: 16,
+      gap: 8,
+    },
+    hint: {
+      fontSize: 13,
+      color: c.muted,
+    },
+    nameInput: {
+      height: 44,
+      borderRadius: c.radius,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      fontSize: 16,
+    },
+    playerButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    playerButton: {
+      paddingVertical: 8,
+    },
+    danger: {
+      color: c.error,
     },
     animalRow: {
       paddingHorizontal: 16,

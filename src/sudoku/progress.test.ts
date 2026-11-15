@@ -8,19 +8,19 @@ function win(difficulty: GameRecord['difficulty'], extra: Partial<GameRecord> = 
 }
 
 test('Level up unlocks the next level after three wins on the one before', () => {
-  assert.deepEqual(unlockedLevels([], true), ['easy']);
-  const two = [win('easy'), win('easy')];
-  assert.deepEqual(unlockedLevels(two, true), ['easy']);
-  const three = [...two, win('easy')];
-  assert.deepEqual(unlockedLevels(three, true), ['easy', 'medium']);
-  const hardOpen = [...three, win('medium'), win('medium'), win('medium')];
-  assert.deepEqual(unlockedLevels(hardOpen, true), ['easy', 'medium', 'hard']);
+  assert.deepEqual(unlockedLevels([], true), ['beginner']);
+  const two = [win('beginner'), win('beginner')];
+  assert.deepEqual(unlockedLevels(two, true), ['beginner']);
+  const three = [...two, win('beginner')];
+  assert.deepEqual(unlockedLevels(three, true), ['beginner', 'easy']);
+  const mediumOpen = [...three, win('easy'), win('easy'), win('easy')];
+  assert.deepEqual(unlockedLevels(mediumOpen, true), ['beginner', 'easy', 'medium']);
 });
 
 test('daily wins do not count towards unlocking, and Level up off opens everything', () => {
-  const dailies = [win('easy', { daily: true }), win('easy', { daily: true }), win('easy', { daily: true })];
-  assert.deepEqual(unlockedLevels(dailies, true), ['easy']);
-  assert.equal(unlockedLevels([], false).length, 5);
+  const dailies = [win('beginner', { daily: true }), win('beginner', { daily: true }), win('beginner', { daily: true })];
+  assert.deepEqual(unlockedLevels(dailies, true), ['beginner']);
+  assert.equal(unlockedLevels([], false).length, 8);
 });
 
 test('stars drop with each mistake or hint and never go below one', () => {
@@ -59,8 +59,8 @@ test('weekSummary covers the last seven days, oldest first, and totals each day'
 });
 
 test('unqualified wins earn no level progress or badges', () => {
-  const assisted = { difficulty: 'easy' as const, won: true, elapsedMs: 1000, day: '2026-11-01', qualified: false };
-  assert.deepEqual(unlockedLevels([assisted, assisted, assisted], true), ['easy']);
+  const assisted = { difficulty: 'beginner' as const, won: true, elapsedMs: 1000, day: '2026-11-01', qualified: false };
+  assert.deepEqual(unlockedLevels([assisted, assisted, assisted], true), ['beginner']);
   const got = Object.fromEntries(badges([assisted], 0).map((b) => [b.id, b.unlocked]));
   assert.equal(got['first-win'], false);
 });

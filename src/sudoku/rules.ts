@@ -1,3 +1,7 @@
+import { LEVELS } from './levels.ts';
+import type { Difficulty } from './levels.ts';
+import type { GameRecord } from './stats.ts';
+
 // Same seed for every device on the same local day, so the daily puzzle is shared without a server.
 export function dailySeed(day: string): number {
   // FNV-1a over the day string.
@@ -43,6 +47,24 @@ export function guardedMistakeLimit(kidSafe: boolean, limit: number | null): num
 
 export function guardedTimeLimit(kidSafe: boolean, limit: number | null): number | null {
   return kidSafe ? null : limit;
+}
+
+// Casual play (no mistake limit, Kid-safe included) stops at CASUAL_MAX_LEVEL and after CASUAL_DAILY_WINS wins a day.
+// Everything else is open. Daily challenges are exempt from the daily cap.
+export const CASUAL_MAX_LEVEL: Difficulty = 'medium';
+export const CASUAL_DAILY_WINS = 5;
+
+export function isCasual(kidSafe: boolean, mistakeLimit: number | null): boolean {
+  return guardedMistakeLimit(kidSafe, mistakeLimit) === null;
+}
+
+export function casualWinsOn(games: GameRecord[], day: string): number {
+  return games.filter((g) => g.won && g.casual && g.day === day).length;
+}
+
+export function levelAllowed(level: Difficulty, casual: boolean, casualWins: number): boolean {
+  if (!casual) return true;
+  return LEVELS.indexOf(level) <= LEVELS.indexOf(CASUAL_MAX_LEVEL) && casualWins < CASUAL_DAILY_WINS;
 }
 
 // A win is qualified (earns stars, badges, level and best-time credit) unless hints filled every empty square.

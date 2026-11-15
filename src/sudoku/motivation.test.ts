@@ -18,8 +18,9 @@ test('the message key follows Kid-safe mode', () => {
 
 test('next level progress counts qualified wins on the level before', () => {
   assert.equal(nextLevelProgress([], false), null, 'no progress shown with Level up off');
-  assert.deepEqual(nextLevelProgress([], true), { level: 'medium', wins: 3 });
-  assert.deepEqual(nextLevelProgress([win('easy'), win('easy')], true), { level: 'medium', wins: 1 });
-  assert.deepEqual(nextLevelProgress([win('easy', { qualified: false }), win('easy')], true), { level: 'medium', wins: 2 });
-  assert.equal(nextLevelProgress([win('easy'), win('easy'), win('easy')], true)?.level, 'hard', 'Medium is open, so Hard is next');
+  assert.deepEqual(nextLevelProgress([], true), { level: 'easy', wins: 3 });
+  assert.deepEqual(nextLevelProgress([win('beginner'), win('beginner')], true), { level: 'easy', wins: 1 });
+  assert.deepEqual(nextLevelProgress([win('beginner', { qualified: false }), win('beginner')], true), { level: 'easy', wins: 2 });
+  const mediumOpen = [win('beginner'), win('beginner'), win('beginner'), win('easy'), win('easy'), win('easy')];
+  assert.equal(nextLevelProgress(mediumOpen, true)?.level, 'hard', 'Medium is open, so Hard is next');
 });

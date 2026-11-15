@@ -1,5 +1,6 @@
-import { LEVELS, WINS_TO_UNLOCK, unlockedLevels } from './progress.ts';
-import type { Difficulty } from './engine';
+import { WINS_TO_UNLOCK, unlockedLevels } from './progress.ts';
+import { LEVELS } from './levels.ts';
+import type { Difficulty } from './levels.ts';
 import type { GameRecord } from './stats';
 
 // Which encouragement to show. The wording lives in i18n: kid_<kind> for Kid-safe mode, adult_<kind> otherwise.

@@ -10,18 +10,17 @@ import { useTour } from '../tour';
 import { useProfiles } from '../profiles';
 import { unlockedLevels } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
-import type { Difficulty } from '../sudoku/engine';
+import type { Difficulty } from '../sudoku/levels.ts';
+import { LEVELS } from '../sudoku/levels.ts';
+import { CASUAL_DAILY_WINS, CASUAL_MAX_LEVEL, casualWinsOn, isCasual, levelAllowed } from '../sudoku/rules';
+import { dayKey } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
+import { CHALLENGES } from '../challenges';
+import type { StringKey } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-const DIFFICULTIES: { value: Difficulty; label: 'easy' | 'medium' | 'hard' | 'expert' | 'evil' }[] = [
-  { value: 'easy', label: 'easy' },
-  { value: 'medium', label: 'medium' },
-  { value: 'hard', label: 'hard' },
-  { value: 'expert', label: 'expert' },
-  { value: 'evil', label: 'evil' },
-];
+const DIFFICULTIES: { value: Difficulty; label: Difficulty }[] = LEVELS.map((level) => ({ value: level, label: level }));
 
 const TIME_LIMITS: { value: number | null; label: string; key?: 'no_limit' }[] = [
   { value: null, label: 'No limit', key: 'no_limit' },
@@ -42,12 +41,19 @@ export function MenuPanel() {
   const newGame = useGameStore((s) => s.newGame);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
   const startDaily = useGameStore((s) => s.startDaily);
+  const startChallenge = useGameStore((s) => s.startChallenge);
+  const challenge = useGameStore((s) => s.challenge);
   const fillNotes = useGameStore((s) => s.fillNotes);
   const kidSafe = usePrefs((s) => s.kidSafe);
   const notes = usePrefs((s) => s.notes);
   const levelUp = usePrefs((s) => s.levelUp);
+  const mistakeLimit = usePrefs((s) => s.mistakeLimit);
   const games = useProgress((s) => s.games);
   const open_ = unlockedLevels(games, levelUp);
+  // Casual play is limited to Medium and a daily win cap; see rules.ts.
+  const casual = isCasual(kidSafe, mistakeLimit);
+  const casualWins = casualWinsOn(games, dayKey(new Date()));
+  const allowed = (level: Difficulty) => levelAllowed(level, casual, casualWins);
   const activeName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
   const profiles = useProfiles((s) => s.profiles);
   const activeId = useProfiles((s) => s.activeId);
@@ -101,7 +107,7 @@ export function MenuPanel() {
             <View style={styles.row} accessibilityRole="radiogroup">
               {DIFFICULTIES.map((d) => {
                 const active = d.value === difficulty;
-                const locked = !open_.includes(d.value);
+                const locked = !open_.includes(d.value) || !allowed(d.value);
                 return (
                   <Pressable
                     key={d.value}
@@ -118,6 +124,36 @@ export function MenuPanel() {
                 );
               })}
             </View>
+            {casual ? (
+              <Text style={styles.note}>{t('casual_note', { level: t(CASUAL_MAX_LEVEL), n: casualWins, max: CASUAL_DAILY_WINS })}</Text>
+            ) : null}
+          </Section>
+
+          <Section title={t('challenges')} styles={styles}>
+            <View style={styles.list} accessibilityRole="radiogroup">
+              {CHALLENGES.map((ch) => {
+                const active = ch.id === challenge;
+                const locked = !levelAllowed(ch.level, isCasual(kidSafe, ch.mistakes), casualWins);
+                const time = ch.minutes === null ? t('no_limit') : `${ch.minutes} min`;
+                const hints = ch.hintLimit === null ? t('no_limit') : ch.hintLimit === 0 ? t('no_hints') : t(ch.hintLimit === 1 ? 'hint_one' : 'hint_many', { n: ch.hintLimit });
+                return (
+                  <Pressable
+                    key={ch.id}
+                    accessibilityRole="radio"
+                    aria-checked={active}
+                    aria-disabled={locked}
+                    disabled={locked}
+                    onPress={() => act(() => startChallenge(ch.id))}
+                    style={[styles.challenge, active && styles.chipOn, locked && styles.locked]}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextOn]}>{t(`challenge_${ch.id}` as StringKey)}</Text>
+                    <Text style={[styles.challengeDetail, active && styles.chipTextOn]}>
+                      {[t(ch.level), time, `${t('mistakes')} ${ch.mistakes}`, hints].join(' · ')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </Section>
 
           <Section title={t('time_limit')} styles={styles}>
@@ -129,7 +165,7 @@ export function MenuPanel() {
                     key={limit.label}
                     accessibilityRole="radio"
                     aria-checked={active}
-                    disabled={kidSafe}
+                    disabled={kidSafe || !allowed(difficulty)}
                     onPress={() => act(() => setTimeLimit(limit.value))}
                     style={[styles.chip, active && styles.chipOn]}
                   >
@@ -142,7 +178,12 @@ export function MenuPanel() {
 
           <Section title={t('game')} styles={styles}>
             <View style={styles.row}>
-              <Pressable accessibilityRole="button" onPress={() => act(() => newGame(difficulty))} style={[styles.action, styles.primary]}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!allowed(difficulty)}
+                onPress={() => act(() => newGame(difficulty))}
+                style={[styles.action, styles.primary, !allowed(difficulty) && styles.locked]}
+              >
                 <Text style={styles.primaryText}>{t('new_game')}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => act(() => startDaily())} style={styles.action}>
@@ -249,6 +290,9 @@ function makeStyles(c: Palette) {
     actionText: { fontSize: 15, fontWeight: '700', color: c.accent },
     primaryText: { fontSize: 15, fontWeight: '700', color: c.onAccent },
     note: { fontSize: 14, lineHeight: 20, color: c.muted },
+    list: { gap: 8 },
+    challenge: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: c.radius, borderWidth: 2, borderColor: c.line, backgroundColor: c.background, gap: 2 },
+    challengeDetail: { fontSize: 13, color: c.muted },
     installButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, backgroundColor: c.accent },
     close: { alignItems: 'center', paddingVertical: 12 },
     closeText: { fontSize: 16, fontWeight: '700', color: c.muted },

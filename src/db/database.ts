@@ -69,5 +69,14 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       `);
     });
   }
+  if (current < 6) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        ALTER TABLE game_history ADD COLUMN casual INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE game_history ADD COLUMN challenge TEXT;
+        PRAGMA user_version = 6;
+      `);
+    });
+  }
   return db;
 }

@@ -1,4 +1,5 @@
-import type { Difficulty } from './engine';
+import { LEVELS } from './levels.ts';
+import type { Difficulty } from './levels.ts';
 
 export interface GameRecord {
   difficulty: Difficulty;
@@ -11,6 +12,8 @@ export interface GameRecord {
   hints?: number;
   stars?: number;
   qualified?: boolean; // false when hints filled every empty square
+  casual?: boolean; // no mistake limit, so subject to the casual level rules
+  challenge?: string | null; // id of the named challenge played, if any
   at?: string; // ISO time the game ended
 }
 
@@ -30,7 +33,7 @@ export interface Stats {
   dailyStreak: number;
 }
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
+const DIFFICULTIES: Difficulty[] = [...LEVELS];
 
 export function dayKey(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');

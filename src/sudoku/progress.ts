@@ -1,14 +1,13 @@
-import type { Difficulty } from './engine';
+import { LEVELS } from './levels.ts';
+import type { Difficulty } from './levels.ts';
 import type { GameRecord } from './stats';
-
-export const LEVELS: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
 export const WINS_TO_UNLOCK = 3;
 
 // Level up: each level unlocks after WINS_TO_UNLOCK wins on the level before it. Daily games do not count.
 // With Level up off, every level is open.
 export function unlockedLevels(games: GameRecord[], levelUp: boolean): Difficulty[] {
-  if (!levelUp) return LEVELS;
-  const unlocked: Difficulty[] = ['easy'];
+  if (!levelUp) return [...LEVELS];
+  const unlocked: Difficulty[] = [LEVELS[0]];
   for (let i = 0; i < LEVELS.length - 1; i++) {
     const wins = games.filter((g) => g.won && g.qualified !== false && !g.daily && g.difficulty === LEVELS[i]).length;
     if (wins < WINS_TO_UNLOCK) break;
@@ -34,7 +33,7 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
   const qualified = games.filter((g) => g.won && g.qualified !== false);
   const wins = qualified.length;
   const dailyWins = qualified.filter((g) => g.daily).length;
-  const hardWin = qualified.some((g) => ['hard', 'expert', 'evil'].includes(g.difficulty));
+  const hardWin = qualified.some((g) => ['hard', 'expert', 'master', 'evil', 'genius'].includes(g.difficulty));
   const flawless = qualified.some((g) => g.mistakes === 0);
   return [
     { id: 'first-win', title: 'First win', description: 'Finish your first puzzle.', unlocked: wins >= 1 },

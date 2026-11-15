@@ -1,4 +1,6 @@
-import type { BoardState, Difficulty } from './engine';
+import { LEVELS } from './levels.ts';
+import type { BoardState } from './engine';
+import type { Difficulty } from './levels.ts';
 
 export interface SessionRecord {
   difficulty: Difficulty;
@@ -11,6 +13,7 @@ export interface SessionRecord {
   puzzle?: string;
   mistakeLimit?: number | null;
   daily?: string | null;
+  challenge?: string | null;
   // Undo and redo steps, kept across reloads. Only the most recent steps are saved.
   history?: { past: BoardState[]; future: BoardState[] };
 }
@@ -18,7 +21,7 @@ export interface SessionRecord {
 // Undo steps kept in a saved session. Each step is a full board, so the list stays short.
 export const SAVED_HISTORY_STEPS = 50;
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
+const DIFFICULTIES: Difficulty[] = [...LEVELS];
 
 function isGrid(value: unknown, check: (n: unknown) => boolean): value is unknown[] {
   return Array.isArray(value) && value.length === 81 && value.every(check);
@@ -55,6 +58,7 @@ export function parseSession(raw: string): SessionRecord | null {
     (data.puzzle === undefined || (typeof data.puzzle === 'string' && data.puzzle.length === 81)) &&
     (data.mistakeLimit == null || (Number.isInteger(data.mistakeLimit) && data.mistakeLimit > 0)) &&
     (data.daily == null || typeof data.daily === 'string') &&
+    (data.challenge == null || typeof data.challenge === 'string') &&
     (data.history === undefined ||
       (Array.isArray(data.history.past) &&
         Array.isArray(data.history.future) &&

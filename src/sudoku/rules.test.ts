@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isMistake, markErrors, outOfMistakes, unitLabel } from './rules.ts';
+import { casualWinsOn, completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, isCasual, isMistake, levelAllowed, markErrors, outOfMistakes, unitLabel } from './rules.ts';
 import { createRng, generatePuzzle } from './engine.ts';
 
 test('the daily seed is stable for a day and differs between days', () => {
@@ -69,4 +69,25 @@ test('a win is not qualified when hints filled every empty square', async () => 
   assert.equal(hintsQualify('1'.repeat(81), 0), false, 'no empty squares left to hint: nothing to qualify');
   assert.equal(hintsQualify('0'.repeat(3) + '1'.repeat(78), 3), false, 'three empty squares, three hints');
   assert.equal(hintsQualify('', 99), true, 'saved without its puzzle text');
+});
+
+test('casual play stops at Medium and at five casual wins a day; other play is open', () => {
+  assert.equal(levelAllowed('medium', true, 4), true);
+  assert.equal(levelAllowed('hard', true, 0), false, 'casual play cannot reach Hard');
+  assert.equal(levelAllowed('beginner', true, 5), false, 'five casual wins used up for the day');
+  assert.equal(levelAllowed('genius', false, 99), true, 'a mistake limit opens every level');
+});
+
+test('casual means no mistake limit, Kid-safe included; only casual wins count towards the cap', () => {
+  assert.equal(isCasual(false, null), true);
+  assert.equal(isCasual(false, 3), false);
+  assert.equal(isCasual(true, 3), true, 'Kid-safe turns the mistake limit off');
+  const day = '2026-11-14';
+  const games = [
+    { difficulty: 'easy' as const, won: true, elapsedMs: 1, day, casual: true },
+    { difficulty: 'easy' as const, won: false, elapsedMs: 1, day, casual: true },
+    { difficulty: 'hard' as const, won: true, elapsedMs: 1, day, casual: false },
+    { difficulty: 'easy' as const, won: true, elapsedMs: 1, day: '2026-11-13', casual: true },
+  ];
+  assert.equal(casualWinsOn(games, day), 1);
 });

@@ -7,7 +7,7 @@ import { askGrownUp } from '../gate';
 import { badgeKey, useT } from '../i18n';
 import type { StringKey } from '../i18n';
 import { usePrefs } from '../prefs';
-import type { Difficulty } from '../sudoku/engine';
+import type { Difficulty } from '../sudoku/levels.ts';
 import { badges as computeBadges } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
 import { useGameStore } from '../sudoku/store';
@@ -17,11 +17,14 @@ import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 const LEVEL_KEYS: Record<Difficulty, StringKey> = {
+  beginner: 'beginner',
   easy: 'easy',
   medium: 'medium',
   hard: 'hard',
   expert: 'expert',
+  master: 'master',
   evil: 'evil',
+  genius: 'genius',
 };
 
 export default function StatsScreen() {

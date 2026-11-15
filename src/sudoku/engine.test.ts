@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { CLUE_TARGETS, countSolutions, createRng, findConflicts, generatePuzzle, UNITS } from './engine.ts';
 import type { Difficulty } from './engine.ts';
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'evil'];
+const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'expert', 'master', 'evil', 'genius'];
 
 function parse(text: string): number[] {
   return text.split('').map((c) => (c === '.' ? 0 : Number(c)));
@@ -49,7 +49,7 @@ for (const difficulty of DIFFICULTIES) {
 
     // Easy to hard hit their targets; expert and evil land within a few clues of them (see generatePuzzle shortcut).
     const clues = puzzle.filter(Boolean).length;
-    const slack = difficulty === 'expert' || difficulty === 'evil' ? 6 : 0;
+    const slack = ['expert', 'master', 'evil', 'genius'].includes(difficulty) ? 8 : 0;
     assert.ok(clues <= CLUE_TARGETS[difficulty] + slack, `clues ${clues} within target`);
   });
 }

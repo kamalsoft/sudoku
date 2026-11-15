@@ -1,15 +1,10 @@
+import { CLUE_TARGETS } from './levels.ts';
+import type { Difficulty } from './levels.ts';
+
 // Board indices run 0..80, row-major. Values are 1..9, 0 means empty.
 
-export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'evil';
-
-// Number of given clues each difficulty aims for.
-export const CLUE_TARGETS: Record<Difficulty, number> = {
-  easy: 42,
-  medium: 34,
-  hard: 28,
-  expert: 24,
-  evil: 20,
-};
+export { CLUE_TARGETS, LEVELS } from './levels.ts';
+export type { Difficulty } from './levels.ts';
 
 export type Rng = () => number;
 

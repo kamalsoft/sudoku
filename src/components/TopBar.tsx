@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { elapsedMs, remainingMs } from '../sudoku/session';
 import { useGameStore } from '../sudoku/store';
 import { formatDuration } from '../sudoku/stats';
-import { guardedTimeLimit } from '../sudoku/rules';
+import { guardedMistakeLimit, guardedTimeLimit } from '../sudoku/rules';
+import { findChallenge, gameLimits } from '../challenges';
 import { usePrefs } from '../prefs';
 import { useMenu } from '../menu';
 import { useProfiles } from '../profiles';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-// The one line of game information: the menu button, the title, and time and mistakes.
+// The one line of game information: the menu button, the title with the level, and time and mistakes.
 export function TopBar() {
   const c = useColors();
   const t = useT();
@@ -26,8 +28,11 @@ export function TopBar() {
   const timeLimitMs = useGameStore((s) => s.timeLimitMs);
   const mistakes = useGameStore((s) => s.mistakes);
   const daily = useGameStore((s) => s.daily);
+  const challenge = useGameStore((s) => s.challenge);
+  const difficulty = useGameStore((s) => s.difficulty);
   const kidSafe = usePrefs((s) => s.kidSafe);
   const mistakeLimit = usePrefs((s) => s.mistakeLimit);
+  const hintLimit = usePrefs((s) => s.hintLimit);
   const playerName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
 
   const [now, setNow] = useState(() => Date.now());
@@ -52,7 +57,8 @@ export function TopBar() {
           : running
             ? formatDuration(elapsed)
             : t('paused');
-  const guarded = kidSafe ? null : mistakeLimit;
+  const guarded = guardedMistakeLimit(kidSafe, gameLimits(findChallenge(challenge), { mistakeLimit, hintLimit }).mistakeLimit);
+  const levelName = challenge !== null ? t(`challenge_${challenge}` as StringKey) : t(difficulty);
   const mistakeText = guarded !== null ? `${t('mistakes')} ${mistakes} ${t('of')} ${guarded}` : mistakes > 0 ? `${t('mistakes')} ${mistakes}` : null;
 
   return (
@@ -61,7 +67,9 @@ export function TopBar() {
         <MaterialCommunityIcons name="menu" size={26} color={c.text} />
       </Pressable>
       <View style={styles.middle}>
-        <Text style={styles.title}>Sudoku</Text>
+        <Text style={styles.title}>
+          Sudoku <Text style={styles.level}>· {levelName}</Text>
+        </Text>
         <Text style={styles.line} accessibilityLiveRegion="polite" numberOfLines={1}>
           {[t('playing_as', { name: playerName }), status, daily !== null ? t('daily_challenge') : null, mistakeText].filter(Boolean).join(' · ')}
         </Text>
@@ -98,6 +106,11 @@ function makeStyles(c: Palette) {
       fontSize: 18,
       fontWeight: '800',
       color: c.text,
+    },
+    level: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.accent,
     },
     line: {
       fontSize: 13,

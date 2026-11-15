@@ -7,9 +7,10 @@ import { applyDigit, applyErase, effectiveMode, fillCandidates, removeFromPeers 
 import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
-import { completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, hintsQualify, isMistake, markErrors, outOfMistakes } from './rules';
+import { casualWinsOn, completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, hintsQualify, isCasual, isMistake, levelAllowed, markErrors, outOfMistakes } from './rules';
 import { dayKey } from './stats';
 import type { GameRecord } from './stats';
+import { findChallenge, gameLimits } from '../challenges';
 import { starsFor } from './progress';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
 import { useProgress } from './progressStore';
@@ -58,6 +59,10 @@ interface GameState {
   failed: FailReason | null;
   // Local day of the daily challenge being played, or null for a normal game.
   daily: string | null;
+  // Id of the named challenge being played, or null. A challenge sets its own clock and limits.
+  challenge: string | null;
+  // The clock the player picked in the menu. Kept apart from a challenge's clock so the next game is not affected.
+  timeChoice: number | null;
   init: () => Promise<void>;
   reload: () => Promise<void>;
   selectCell: (index: number) => void;
@@ -70,6 +75,7 @@ interface GameState {
   undo: () => void;
   redo: () => void;
   newGame: (difficulty: Difficulty, timeLimitMs?: number | null, daily?: string | null) => void;
+  startChallenge: (id: string) => void;
   replay: (puzzle: string, difficulty: Difficulty) => void;
   startDaily: () => void;
   setTimeLimit: (timeLimitMs: number | null) => void;
@@ -143,6 +149,16 @@ function isDifficulty(value: unknown): value is Difficulty {
   return typeof value === 'string' && value in CLUE_TARGETS;
 }
 
+// The mistake and hint limits for the game in play.
+const limitsOf = (challenge: string | null) => gameLimits(findChallenge(challenge), usePrefs.getState());
+
+// Whether the player may start a game at this level now (casual play is limited, see rules.ts).
+function allowedNow(level: Difficulty): boolean {
+  const prefs = usePrefs.getState();
+  const today = dayKey(new Date());
+  return levelAllowed(level, isCasual(prefs.kidSafe, prefs.mistakeLimit), casualWinsOn(useProgress.getState().games, today));
+}
+
 // The history row for a game that ended, won or not.
 function recordFor(s: GameState, won: boolean, elapsed: number): GameRecord {
   const qualified = hintsQualify(s.puzzle, s.hints);
@@ -152,6 +168,8 @@ function recordFor(s: GameState, won: boolean, elapsed: number): GameRecord {
     elapsedMs: elapsed,
     day: dayKey(new Date()),
     daily: s.daily !== null,
+    casual: isCasual(usePrefs.getState().kidSafe, limitsOf(s.challenge).mistakeLimit),
+    challenge: s.challenge,
     puzzle: s.puzzle,
     mistakes: s.mistakes,
     hints: s.hints,
@@ -178,6 +196,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       hints: s.hints,
       puzzle: s.puzzle,
       daily: s.daily,
+      challenge: s.challenge,
       history: {
         past: s.history.past.slice(-SAVED_HISTORY_STEPS),
         future: s.history.future.slice(-SAVED_HISTORY_STEPS),
@@ -226,7 +245,7 @@ export const useGameStore = create<GameState>()((set, get) => {
   };
 
   // Starts a game from a dealt puzzle. The unfinished game before it is recorded as not won.
-  const begin = (game: Game, difficulty: Difficulty, timeLimitMs: number | null, daily: string | null) => {
+  const begin = (game: Game, difficulty: Difficulty, timeLimitMs: number | null, daily: string | null, challenge: string | null) => {
     const s = get();
     if (s.ready && !isOver(s) && hasProgress(s.board)) {
       enqueue(() => recordAndRefresh(recordFor(s, false, elapsedNow())));
@@ -240,6 +259,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       hints: 0,
       failed: null,
       daily,
+      challenge,
+      timeChoice: challenge === null ? timeLimitMs : s.timeChoice,
       selected: null,
       mode: 'enter',
       accumulatedMs: 0,
@@ -248,8 +269,11 @@ export const useGameStore = create<GameState>()((set, get) => {
       shake: null,
       gameId: s.gameId + 1,
     });
-    enqueue(() => setSetting('difficulty', difficulty));
-    enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
+    // A challenge plays its own clock and level, so it does not overwrite the player's saved choices.
+    if (challenge === null) {
+      enqueue(() => setSetting('difficulty', difficulty));
+      enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
+    }
     save();
     motivate('start');
   };
@@ -275,6 +299,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     hints: 0,
     failed: null,
     daily: null,
+    challenge: null,
+    timeChoice: null,
 
     init: () => {
       initializing ??= (async () => {
@@ -284,6 +310,7 @@ export const useGameStore = create<GameState>()((set, get) => {
           loadSessionRaw(),
         ]);
         const session = raw ? parseSession(raw) : null;
+        const timeChoice = parseTimeLimit(savedLimit);
         if (session) {
           set({
             ready: true,
@@ -304,9 +331,14 @@ export const useGameStore = create<GameState>()((set, get) => {
             hints: session.hints ?? 0,
             failed: null,
             daily: session.daily ?? null,
+            challenge: session.challenge ?? null,
+            timeChoice,
           });
         } else {
-          get().newGame(isDifficulty(savedDifficulty) ? savedDifficulty : 'medium', parseTimeLimit(savedLimit));
+          // Restores the last level directly; the casual limits apply to starting games from the menu.
+          const level = isDifficulty(savedDifficulty) ? savedDifficulty : 'medium';
+          set({ timeChoice });
+          begin(gameFrom(level, null), level, timeChoice, null, null);
         }
         void useProgress.getState().load();
       })();
@@ -344,7 +376,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (mode !== 'enter' || get().solved) return;
       if (wrong) {
         shake(selected);
-        if (outOfMistakes(get().mistakes, guardedMistakeLimit(prefs.kidSafe, prefs.mistakeLimit))) fail('mistakes', elapsedNow());
+        if (outOfMistakes(get().mistakes, guardedMistakeLimit(prefs.kidSafe, limitsOf(get().challenge).mistakeLimit))) fail('mistakes', elapsedNow());
         else {
           feedback('error');
           motivate('wrong');
@@ -374,7 +406,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       const prefs = usePrefs.getState();
       if (!prefs.hints || isOver(s)) return;
-      if (prefs.hintLimit !== null && s.hints >= prefs.hintLimit) return;
+      const hintLimit = limitsOf(s.challenge).hintLimit;
+      if (hintLimit !== null && s.hints >= hintLimit) return;
       const selectedEmpty = s.selected !== null && s.board.values[s.selected] === 0 && !s.board.givens[s.selected];
       const target = selectedEmpty ? s.selected! : s.board.values.findIndex((v) => v === 0);
       if (target < 0) return;
@@ -401,15 +434,22 @@ export const useGameStore = create<GameState>()((set, get) => {
       save();
     },
 
-    newGame: (difficulty, timeLimitMs = get().timeLimitMs, daily = null) => {
-      begin(gameFrom(difficulty, daily), difficulty, timeLimitMs, daily);
+    newGame: (difficulty, timeLimitMs = get().challenge === null ? get().timeLimitMs : get().timeChoice, daily = null) => {
+      if (daily === null && !allowedNow(difficulty)) return;
+      begin(gameFrom(difficulty, daily), difficulty, timeLimitMs, daily, null);
+    },
+
+    startChallenge: (id) => {
+      const c = findChallenge(id);
+      if (!c || !allowedNow(c.level)) return;
+      begin(gameFrom(c.level, null), c.level, c.minutes === null ? null : c.minutes * 60_000, null, id);
     },
 
     // Starts a saved puzzle again. The solution is solved from the puzzle, so the saved record needs no answer key.
     replay: (puzzle, difficulty) => {
       const digits = puzzle.split('').map(Number);
       const solution = solvePuzzle(digits);
-      if (!solution) return;
+      if (!solution || !allowedNow(difficulty)) return;
       begin(
         {
           board: createBoard(digits),
@@ -420,6 +460,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         },
         difficulty,
         get().timeLimitMs,
+        null,
         null,
       );
     },
@@ -441,7 +482,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get();
       if (!s.ready || isOver(s)) return;
       const prefs = usePrefs.getState();
-      if (outOfMistakes(s.mistakes, guardedMistakeLimit(prefs.kidSafe, prefs.mistakeLimit))) {
+      if (outOfMistakes(s.mistakes, guardedMistakeLimit(prefs.kidSafe, limitsOf(s.challenge).mistakeLimit))) {
         fail('mistakes', elapsedNow());
         return;
       }

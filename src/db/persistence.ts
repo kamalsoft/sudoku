@@ -135,3 +135,21 @@ export async function deleteProfileData(id: string): Promise<void> {
     }
   });
 }
+
+// Clears one player's games and badge record. Their settings and any saved game stay.
+export async function clearProfileStats(id: string): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM game_history WHERE profile = ?', id);
+    await db.runAsync('DELETE FROM user_settings WHERE key = ?', id === 'default' ? 'seenBadges' : `${id}:seenBadges`);
+  });
+}
+
+// Clears the games and badge records of every player. Settings and saved games stay.
+export async function clearAllStats(): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM game_history');
+    await db.runAsync("DELETE FROM user_settings WHERE key = 'seenBadges' OR key LIKE '%:seenBadges'");
+  });
+}

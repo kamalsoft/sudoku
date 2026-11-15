@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '../components/CelebrationOverlay';
 import { AnimalFriends } from '../components/AnimalFriends';
 import { CompletionToast } from '../components/CompletionToast';
+import { MotivationToast } from '../components/MotivationToast';
 import { MenuPanel } from '../components/MenuPanel';
 import { NumberPad, PAD_KEY_HEIGHT } from '../components/NumberPad';
 import { TopBar } from '../components/TopBar';
@@ -84,6 +85,7 @@ function GameScreen() {
         </View>
       )}
       <CompletionToast />
+      <MotivationToast />
       <CelebrationOverlay />
       <MenuPanel />
       <Tour />

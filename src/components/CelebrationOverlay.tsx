@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { starsFor } from '../sudoku/progress';
 import { hintsQualify } from '../sudoku/rules';
+import { nextLevelProgress } from '../sudoku/motivation';
+import { dayKey, formatDuration, formatDuration as fmt, summarize } from '../sudoku/stats';
 import { Confetti } from './Confetti';
 import { useProgress } from '../sudoku/progressStore';
 import { usePrefs } from '../prefs';
@@ -36,6 +37,18 @@ export function CelebrationOverlay() {
   const puzzle = useGameStore((s) => s.puzzle);
   const qualified = hintsQualify(puzzle, hints);
   const stars = qualified ? starsFor(mistakes, hints) : 0;
+  const games = useProgress((s) => s.games);
+  const levelUp = usePrefs((s) => s.levelUp);
+  const kidSafe = usePrefs((s) => s.kidSafe);
+  const dailyStreak = summarize(games, dayKey(new Date())).dailyStreak;
+  const next = nextLevelProgress(games, levelUp);
+  const winKind = daily !== null ? 'daily_win' : qualified ? 'win' : 'win_assisted';
+  const winLine = t(`${kidSafe ? 'kid' : 'adult'}_${winKind}` as StringKey, {
+    n: dailyStreak,
+    time: fmt(accumulatedMs),
+    mistakes,
+  });
+  const progressLine = next ? t(`${kidSafe ? 'kid' : 'adult'}_progress` as StringKey, { n: next.wins, level: t(next.level) }) : null;
   const newGame = useGameStore((s) => s.newGame);
   const [dismissedFor, setDismissedFor] = useState<number | null>(null);
   const [fade] = useState(() => new Animated.Value(0));
@@ -76,6 +89,8 @@ export function CelebrationOverlay() {
           {formatDuration(accumulatedMs)} · {mistakes === 1 ? t('mistake_one') : t('mistake_many', { n: mistakes })}
           {hints > 0 ? ` · ${hints === 1 ? t('hint_one') : t('hint_many', { n: hints })}` : ''}
         </Text>
+        <Text style={styles.motivate}>{winLine}</Text>
+        {progressLine ? <Text style={styles.progress}>{progressLine}</Text> : null}
         {badgesOn && earned.length > 0 ? (
           <Text style={styles.badge} accessibilityLiveRegion="polite">{t('new_badge')}: {earned.join(', ')}</Text>
         ) : null}
@@ -155,6 +170,18 @@ function makeStyles(c: Palette) {
       fontSize: 28,
       color: c.entry,
       letterSpacing: 6,
+    },
+    motivate: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.text,
+      textAlign: 'center',
+    },
+    progress: {
+      fontSize: 14,
+      color: c.accent,
+      fontWeight: '700',
+      textAlign: 'center',
     },
     assisted: {
       fontSize: 14,

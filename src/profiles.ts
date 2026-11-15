@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { deleteProfileData, getGlobalSetting, setGlobalSetting, setProfile } from './db/persistence';
+import { clearAllStats, clearProfileStats, deleteProfileData, getGlobalSetting, setGlobalSetting, setProfile } from './db/persistence';
 import { usePrefs } from './prefs';
 import { useProgress } from './sudoku/progressStore';
 import { flushWrites, useGameStore } from './sudoku/store';
@@ -19,6 +19,8 @@ interface ProfilesState {
   add: () => Promise<void>;
   rename: (id: string, name: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  clearStats: (id: string) => Promise<void>;
+  clearAllStats: () => Promise<void>;
 }
 
 function parseProfiles(raw: string | null): Profile[] {
@@ -83,6 +85,19 @@ export const useProfiles = create<ProfilesState>()((set, get) => ({
       await useProgress.getState().load();
       await useGameStore.getState().reload();
     }
+  },
+
+  // Clears the games and badges of one player, or of everyone. Settings and saved games are kept.
+  clearStats: async (id) => {
+    await flushWrites();
+    await clearProfileStats(id);
+    if (id === get().activeId) await useProgress.getState().load();
+  },
+
+  clearAllStats: async () => {
+    await flushWrites();
+    await clearAllStats();
+    await useProgress.getState().load();
   },
 
   add: async () => {

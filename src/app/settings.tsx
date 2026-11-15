@@ -47,6 +47,9 @@ export default function SettingsScreen() {
   const addProfile = useProfiles((s) => s.add);
   const renameProfile = useProfiles((s) => s.rename);
   const removeProfile = useProfiles((s) => s.remove);
+  const clearStatsFor = useProfiles((s) => s.clearStats);
+  const clearEveryone = useProfiles((s) => s.clearAllStats);
+  const [confirmClear, setConfirmClear] = useState<'one' | 'all' | null>(null);
   const activeName = profiles.find((p) => p.id === activeProfile)?.name ?? '';
   const [confirmDelete, setConfirmDelete] = useState(false);
   const hints = usePrefs((s) => s.hints);
@@ -203,6 +206,35 @@ export default function SettingsScreen() {
                   <Text style={[styles.linkText, styles.danger]}>{confirmDelete ? t('confirm_delete') : t('delete_player')}</Text>
                 </Pressable>
               ) : null}
+            </View>
+          </View>
+          <View style={styles.playerEdit}>
+            <Text style={styles.hint}>{t('clear_stats_hint')}</Text>
+            <View style={styles.playerButtons}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={confirmClear === 'one' ? t('confirm_clear') : t('clear_stats')}
+                onPress={() => {
+                  if (confirmClear !== 'one') return setConfirmClear('one');
+                  setConfirmClear(null);
+                  void clearStatsFor(activeProfile);
+                }}
+                style={styles.playerButton}
+              >
+                <Text style={[styles.linkText, styles.danger]}>{confirmClear === 'one' ? t('confirm_clear') : t('clear_stats')}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={confirmClear === 'all' ? t('confirm_clear') : t('clear_all_stats')}
+                onPress={() => {
+                  if (confirmClear !== 'all') return setConfirmClear('all');
+                  setConfirmClear(null);
+                  void clearEveryone();
+                }}
+                style={styles.playerButton}
+              >
+                <Text style={[styles.linkText, styles.danger]}>{confirmClear === 'all' ? t('confirm_clear') : t('clear_all_stats')}</Text>
+              </Pressable>
             </View>
           </View>
         </Group>

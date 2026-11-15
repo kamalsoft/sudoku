@@ -14,6 +14,10 @@ import { starsFor } from './progress';
 import { clearSession, getSetting, loadSessionRaw, recordGame, saveSession, setSetting } from '../db/persistence';
 import { useProgress } from './progressStore';
 import { feedback } from '../feedback';
+import { translate } from '../i18n';
+import { useMotivation } from '../motivationStore';
+import { motivationKey } from './motivation.ts';
+import type { MotivationKind } from './motivation.ts';
 import { usePrefs } from '../prefs';
 
 export interface Shake {
@@ -86,6 +90,13 @@ function enqueue(task: () => Promise<unknown>) {
 }
 
 let initializing: Promise<void> | null = null;
+
+// Shows an encouraging line in the player's language, worded for kids (Kid-safe mode) or grown-ups.
+function motivate(kind: MotivationKind, vars?: Record<string, string | number>) {
+  const prefs = usePrefs.getState();
+  const key = motivationKey(kind, prefs.kidSafe);
+  useMotivation.getState().say(translate(prefs.language, key as Parameters<typeof translate>[1], vars));
+}
 
 // Saves a finished game, then refreshes the progress shown on the game and Stats screens.
 function recordAndRefresh(game: GameRecord) {
@@ -240,6 +251,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     enqueue(() => setSetting('difficulty', difficulty));
     enqueue(() => setSetting('timeLimit', JSON.stringify(timeLimitMs)));
     save();
+    motivate('start');
   };
 
   return {
@@ -333,7 +345,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (wrong) {
         shake(selected);
         if (outOfMistakes(get().mistakes, guardedMistakeLimit(prefs.kidSafe, prefs.mistakeLimit))) fail('mistakes', elapsedNow());
-        else feedback('error');
+        else {
+          feedback('error');
+          motivate('wrong');
+        }
       } else if (get().errors[selected]) {
         shake(selected);
         feedback('error');

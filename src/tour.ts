@@ -23,6 +23,18 @@ export const TOUR_STEPS = [
     body: 'Tap the ☰ button for levels, time limits, a new or daily puzzle, your stats, Settings, this tour, and Install.',
   },
   {
+    title: 'Settings: how play works',
+    body: 'Open ☰, then Settings. Gameplay sets the mistake limit, Notes, Hints and Level up. Stars and badges reward your wins.',
+  },
+  {
+    title: 'Settings: looks and comfort',
+    body: 'Appearance sets the colours and language. Comfort makes the digits bigger and adds markers for colour-blind players. Feedback sets sounds and vibration.',
+  },
+  {
+    title: 'Settings: kids and players',
+    body: 'Kids holds Kid-safe mode, animal friends and Parent lock. Players lets each child have their own games, name and settings.',
+  },
+  {
     title: 'For grown-ups',
     body: 'Parent lock (Settings, then Kids) asks a simple sum before Settings opens. Kid-safe mode keeps games gentle.',
   },

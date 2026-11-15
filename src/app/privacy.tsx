@@ -24,7 +24,7 @@ export default function PrivacyScreen() {
 
       <Heading>Web hosting</Heading>
       <Para>
-        The web version is served by GitHub Pages. Like any website, the host may keep standard server logs, such as
+        The web version is hosted on a standard web host. Like any website, the host may keep standard server logs, such as
         the time of a visit. The app does not add to them.
       </Para>
 
@@ -34,7 +34,7 @@ export default function PrivacyScreen() {
       <Bullet>Uninstalling the app removes everything on a phone.</Bullet>
 
       <Heading>Questions</Heading>
-      <Para>Ask on the project&apos;s GitHub page. Changes to this page appear in the app.</Para>
+      <Para>Ask the developer, Kamalesh. Changes to this page appear in the app.</Para>
     </Page>
   );
 }

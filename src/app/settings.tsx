@@ -78,7 +78,12 @@ export default function SettingsScreen() {
           <Text style={styles.title}>{t('title_settings')}</Text>
         </View>
 
-        <Group title={t('group_appearance')}>
+        <Text style={styles.intro}>Each section below explains what it changes. Nothing here can be lost, and you can change any choice at any time.</Text>
+
+        <Group
+          title={t('group_appearance')}
+          footer="Choose how the game looks and which language it speaks. Candy, Jungle and Space are bright and playful. True black is dark and can save battery on some phones."
+        >
           <View style={styles.rowPlain}>
             <Text style={[styles.label, styles.labelGrow]}>{t('row_language')}</Text>
             <Segmented styles={styles} c={c} options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))} value={language} onChange={(v) => update('language', v)} />
@@ -110,7 +115,7 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_gameplay')}
-          footer="Casual never ends a game. In a capped game, a wrong digit counts as a mistake, and reaching the limit ends it."
+          footer="Casual: a wrong number never ends the game. 3 or 5: a game ends when that many wrong numbers are entered. Hints and Notes help while you play. Level up unlocks harder puzzles as you win."
         >
           <View style={[styles.rowPlain, kidSafe && styles.disabled]} pointerEvents={kidSafe ? 'none' : 'auto'}>
             <Text style={[styles.label, styles.labelGrow]}>{t('row_mistake_limit')}</Text>
@@ -178,17 +183,20 @@ export default function SettingsScreen() {
           </View>
         </Group>
 
-        <Group title={t('group_comfort')} footer="Bigger digits, and colour-blind markers: a ! for wrong cells and a diamond for matching numbers.">
+        <Group title={t('group_comfort')} footer="Large digits makes the numbers bigger. Colour-blind friendly adds a ! to wrong numbers and a diamond to matching numbers, so colour is not needed to see them.">
           <ToggleRow styles={styles} c={c} label={t('row_large_digits')} value={largeDigits} onChange={(v) => update('largeDigits', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_colour_blind')} value={colorBlind} last onChange={(v) => update('colorBlind', v)} />
         </Group>
 
-        <Group title={t('group_feedback')} footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>
+        <Group
+          title={t('group_feedback')}
+          footer={Platform.OS === 'web' ? 'Sound plays a short tone when you tap, make a mistake or finish. Vibration is a gentle buzz on phones and tablets only. Turn either off for a quiet game.' : 'Sound plays a short tone when you tap, make a mistake or finish. Vibration is a gentle buzz. Turn either off for a quiet game.'}
+        >
           <ToggleRow styles={styles} c={c} label={t('row_sound')} value={sound} onChange={(v) => update('sound', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_haptics')} value={haptics} last onChange={(v) => update('haptics', v)} />
         </Group>
 
-        <Group title={t('group_players')} footer="Each player has their own games, stats and settings on this device. Renaming and deleting only affect the player you pick.">
+        <Group title={t('group_players')} footer="Each player keeps their own games, stats and settings on this device. Tap a name to play as that player. You can rename or delete the player who is playing.">
           <View style={styles.playerList} accessibilityRole="radiogroup">
             {profiles.map((p, i) => {
               const on = p.id === activeProfile;
@@ -234,7 +242,7 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_about')}
-          footer={Platform.OS === 'web' && !installed && ios ? 'On iPhone or iPad, tap Share, then Add to Home Screen.' : undefined}
+          footer={Platform.OS === 'web' && !installed && ios ? 'On iPhone or iPad, tap Share, then Add to Home Screen. The About page also has the privacy policy and terms.' : 'The About page also has the privacy policy and terms.'}
         >
           {Platform.OS === 'web' ? (
             <Row
@@ -443,6 +451,11 @@ function makeStyles(c: Palette) {
     backText: {
       color: c.accent,
       fontWeight: '600',
+    },
+    intro: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.muted,
     },
     title: {
       fontSize: 26,

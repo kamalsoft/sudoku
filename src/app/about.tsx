@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-const REPO = 'https://github.com/kamalsoft/sudoku';
 
 // About the app, the developer, how Parent lock works, and the disclaimer.
 export default function AboutScreen() {
@@ -39,10 +38,7 @@ export default function AboutScreen() {
         </Section>
 
         <Section title="Developer">
-          <Text style={styles.body}>Made by kamalsoft.</Text>
-          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(REPO)} style={styles.linkRow}>
-            <Text style={styles.linkText}>Source code on GitHub</Text>
-          </Pressable>
+          <Text style={styles.body}>Developer: Kamalesh.</Text>
         </Section>
 
         <Section title="Privacy">

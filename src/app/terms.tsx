@@ -35,13 +35,13 @@ export default function TermsScreen() {
 
       <Heading>Ownership</Heading>
       <Para>
-        The code and artwork belong to the developer, kamalsoft. Sudoku is a classic puzzle. No code has been copied
+        The code and artwork belong to the developer, Kamalesh. Sudoku is a classic puzzle. No code has been copied
         from any commercial game.
       </Para>
 
       <Heading>Changes and questions</Heading>
       <Para>
-        These terms may change. The newest version is shown in the app. Ask questions on the project&apos;s GitHub page.
+        These terms may change. The newest version is shown in the app. Ask questions by contacting the developer, Kamalesh.
       </Para>
     </Page>
   );

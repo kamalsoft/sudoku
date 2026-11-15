@@ -8,6 +8,7 @@ import { formatDuration } from '../sudoku/stats';
 import { guardedTimeLimit } from '../sudoku/rules';
 import { usePrefs } from '../prefs';
 import { useMenu } from '../menu';
+import { useProfiles } from '../profiles';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
@@ -27,6 +28,7 @@ export function TopBar() {
   const daily = useGameStore((s) => s.daily);
   const kidSafe = usePrefs((s) => s.kidSafe);
   const mistakeLimit = usePrefs((s) => s.mistakeLimit);
+  const playerName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -61,7 +63,7 @@ export function TopBar() {
       <View style={styles.middle}>
         <Text style={styles.title}>Sudoku</Text>
         <Text style={styles.line} accessibilityLiveRegion="polite" numberOfLines={1}>
-          {[status, daily !== null ? t('daily_challenge') : null, mistakeText].filter(Boolean).join(' · ')}
+          {[t('playing_as', { name: playerName }), status, daily !== null ? t('daily_challenge') : null, mistakeText].filter(Boolean).join(' · ')}
         </Text>
       </View>
       <View style={styles.spacer} />

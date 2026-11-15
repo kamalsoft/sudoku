@@ -1,6 +1,7 @@
 import { LEVELS } from './levels.ts';
 import type { Difficulty } from './levels.ts';
 import type { GameRecord } from './stats';
+import { CHALLENGES } from '../challenges.ts';
 export const WINS_TO_UNLOCK = 3;
 
 // Level up: each level unlocks after WINS_TO_UNLOCK wins on the level before it. Daily games do not count.
@@ -35,6 +36,7 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
   const dailyWins = qualified.filter((g) => g.daily).length;
   const hardWin = qualified.some((g) => ['hard', 'expert', 'master', 'evil', 'genius'].includes(g.difficulty));
   const flawless = qualified.some((g) => g.mistakes === 0);
+  const challengeIds = new Set(qualified.map((g) => g.challenge).filter(Boolean));
   return [
     { id: 'first-win', title: 'First win', description: 'Finish your first puzzle.', unlocked: wins >= 1 },
     { id: 'five-wins', title: 'Five wins', description: 'Finish five puzzles.', unlocked: wins >= 5 },
@@ -43,6 +45,8 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
     { id: 'daily-streak', title: 'Three-day streak', description: 'Finish a daily challenge three days in a row.', unlocked: dailyStreak >= 3 },
     { id: 'flawless', title: 'Flawless', description: 'Finish a puzzle with no mistakes.', unlocked: flawless },
     { id: 'brave', title: 'Brave solver', description: 'Finish a Hard, Expert or Evil puzzle.', unlocked: hardWin },
+    { id: 'challenger', title: 'Challenger', description: 'Win a named challenge.', unlocked: challengeIds.size >= 1 },
+    { id: 'mission-control', title: 'Mission Control', description: 'Win every named challenge.', unlocked: CHALLENGES.every((c) => challengeIds.has(c.id)) },
   ];
 }
 

@@ -20,6 +20,14 @@ export const CHALLENGES: Challenge[] = [
   { id: 'night_owl', level: 'expert', minutes: 20, mistakes: 2, hintLimit: 1 },
   { id: 'dragons_den', level: 'master', minutes: 25, mistakes: 1, hintLimit: 0 },
   { id: 'genius_trial', level: 'genius', minutes: 30, mistakes: 1, hintLimit: 0 },
+  { id: 'lunar_walk', level: 'beginner', minutes: null, mistakes: 3, hintLimit: 3 },
+  { id: 'comet_dash', level: 'easy', minutes: 10, mistakes: 3, hintLimit: 2 },
+  { id: 'orions_belt', level: 'medium', minutes: 15, mistakes: 3, hintLimit: 1 },
+  { id: 'nebula', level: 'hard', minutes: 20, mistakes: 2, hintLimit: 1 },
+  { id: 'pulsar', level: 'expert', minutes: 15, mistakes: 2, hintLimit: 0 },
+  { id: 'quasar', level: 'master', minutes: 30, mistakes: 1, hintLimit: 0 },
+  { id: 'supernova', level: 'evil', minutes: 20, mistakes: 1, hintLimit: 0 },
+  { id: 'event_horizon', level: 'genius', minutes: 25, mistakes: 1, hintLimit: 0 },
 ];
 
 export const findChallenge = (id: string | null | undefined) => CHALLENGES.find((c) => c.id === id);

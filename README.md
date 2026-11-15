@@ -10,9 +10,9 @@ Developer: Kamalesh
 
 - **Eight levels:** Beginner, Easy, Medium, Hard, Expert, Master, Evil and Genius. Puzzles are generated with a unique solution.
 - **Daily puzzle:** the same puzzle for everyone on the same day.
-- **Named challenges:** fixed combinations of level, time limit, mistake limit and hint limit (Sunrise, Morning Run, Steady Hand, Iron Mind, Night Owl, Dragon’s Den, Genius Trial).
+- **Named challenges:** fourteen fixed combinations of level, time limit, mistake limit and hint limit, named after space and sky references (Sunrise, Lunar Walk, Comet Dash, Orion’s Belt, Nebula, Pulsar, Quasar, Supernova, Event Horizon and more).
 - **Help when stuck:** pencil notes, auto-notes, hints, undo and redo, and red marks for wrong or repeated digits.
-- **Stars and badges:** each qualified win earns 1 to 3 stars. Badges unlock from your history.
+- **Stars and badges:** each qualified win earns 1 to 3 stars. Badges unlock from your history, including Challenger (win a named challenge) and Mission Control (win every named challenge).
 - **Level up:** each level opens after three qualified wins on the one before (optional).
 - **Casual play:** with no mistake limit, play stops at Medium and five casual wins a day. Set a mistake limit to open every level.
 - **Kid-safe mode:** no mistake limits and no timers, with encouraging messages written for children.

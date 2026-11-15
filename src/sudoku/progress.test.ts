@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { badges, starsFor, unlockedLevels } from './progress.ts';
+import { CHALLENGES } from '../challenges.ts';
 import type { GameRecord } from './stats.ts';
 
 function win(difficulty: GameRecord['difficulty'], extra: Partial<GameRecord> = {}): GameRecord {
@@ -63,4 +64,14 @@ test('unqualified wins earn no level progress or badges', () => {
   assert.deepEqual(unlockedLevels([assisted, assisted, assisted], true), ['beginner']);
   const got = Object.fromEntries(badges([assisted], 0).map((b) => [b.id, b.unlocked]));
   assert.equal(got['first-win'], false);
+});
+
+test('Challenger is earned by one named challenge win; Mission Control needs every challenge', () => {
+  const one = [win('easy', { challenge: CHALLENGES[0].id })];
+  const got = (games: GameRecord[]) => Object.fromEntries(badges(games, 0).map((b) => [b.id, b.unlocked]));
+  assert.equal(got(one).challenger, true);
+  assert.equal(got(one)['mission-control'], false);
+  const all = CHALLENGES.map((c) => win(c.level, { challenge: c.id }));
+  assert.equal(got(all)['mission-control'], true);
+  assert.equal(got([win('easy', { challenge: CHALLENGES[0].id, qualified: false })]).challenger, false, 'unqualified wins do not count');
 });

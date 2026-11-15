@@ -110,6 +110,76 @@ Routes live in `src/app/`. Every file there is a screen. Keep components, hooks 
 - **Casual play:** no mistake limit, Kid-safe mode included. Rules are in `src/sudoku/rules.ts`.
 - **Data:** saved games and history are in a local SQLite database. The schema version is tracked with `PRAGMA user_version` in `src/db/database.ts`.
 
+## Level logic
+
+This section explains how a level becomes a puzzle, how levels unlock, and how the casual and challenge rules are applied in code.
+
+### The eight levels
+
+`src/sudoku/levels.ts` is the single list of levels, in order from gentlest to hardest. Each level has a clue target: the number of given digits the generator aims for.
+
+| Level | Clue target | Unlocks after (with Level up) |
+|---|---|---|
+| Beginner | 46 | start |
+| Easy | 42 | 3 qualified Beginner wins |
+| Medium | 34 | 3 qualified Easy wins |
+| Hard | 28 | 3 qualified Medium wins |
+| Expert | 24 | 3 qualified Hard wins |
+| Master | 22 | 3 qualified Expert wins |
+| Evil | 20 | 3 qualified Master wins |
+| Genius | 18 | 3 qualified Evil wins |
+
+A lower target means fewer clues, so the puzzle is harder.
+
+### Generating a puzzle
+
+`generatePuzzle(difficulty, rng)` in `src/sudoku/engine.ts` works in three steps:
+
+1. **Full solution:** `randomSolution` fills an empty grid with backtracking, trying digits in random order.
+2. **Carving:** `carve` removes clues in 180-degree symmetric pairs. A removal is kept only if `countSolutions` still finds exactly one solution. Carving stops once the clue count reaches the target.
+3. **Retries:** if carving stops above the target, the generator tries again with a new solution, up to 20 times, and keeps the sparsest puzzle it found.
+
+The daily puzzle is the same for everyone on a given day. `dailySeed` turns the date into a seed, and `createRng` (a seeded generator) makes the same choices each time. Other games use `Math.random`.
+
+**Known limit:** greedy symmetric carving stalls near 23 to 26 clues. So Expert, Master, Evil and Genius can land a few clues above their targets, and the sparsest levels play close to each other. The test in `src/sudoku/engine.test.ts` allows a slack of 8 clues for those levels. Upgrading the removal order would close this gap.
+
+### Unlocking levels (Level up)
+
+`unlockedLevels(games, levelUp)` in `src/sudoku/progress.ts` decides which levels are open:
+
+- **Level up off:** every level is open.
+- **Level up on:** Beginner is open. Each next level opens when the player has at least `WINS_TO_UNLOCK` (3) wins on the level before it. Only qualified wins count, and daily games are not counted.
+
+`nextLevelProgress` uses the same rule to show how many more wins the next locked level needs.
+
+### Casual play
+
+Casual play means there is no mistake limit. The check is `isCasual(kidSafe, mistakeLimit)` in `src/sudoku/rules.ts`, which is true when `guardedMistakeLimit` returns `null`. Kid-safe mode always counts as casual, because it turns mistake limits off.
+
+Casual play is limited in two ways:
+
+- **Level cap:** casual games stop at `CASUAL_MAX_LEVEL` (Medium). Higher levels are open only with a mistake limit.
+- **Daily cap:** after `CASUAL_DAILY_WINS` (5) casual wins in a day, no new casual games can be started. `casualWinsOn` counts the won games with `casual` set for today.
+
+`levelAllowed(level, casual, casualWins)` applies both rules. The store's `allowedNow` supplies the current settings and games. The daily puzzle is exempt from the cap, but its win still counts towards it.
+
+**Known limit:** the level and cap check runs when a game is started from the menu. A saved game restored at launch skips it, so reloading the app after a casual win starts a new game at the saved level without the check.
+
+### Named challenges
+
+`src/challenges.ts` holds the fixed challenges. Each one sets a level, a clock (`minutes`, or `null` for no clock), a mistake limit and a hint limit. Starting a challenge calls `startChallenge` in `src/sudoku/store.ts`, which applies those values to that game only:
+
+- `gameLimits` uses the challenge's mistake and hint limits in place of the player's settings.
+- The challenge clock replaces the player's time limit. The player's saved choice is not changed.
+- Every challenge has a mistake limit, so it is never casual. Kid-safe mode still turns the limits off, and a Kid-safe challenge is then treated as casual.
+
+### Scoring and what counts
+
+- **Qualified win:** `hintsQualify(puzzle, hints)` is true unless hints filled every empty square. Stars, badges, level progress and best times use qualified wins only.
+- **Stars:** `starsFor(mistakes, hints)` starts at 3 and loses one for each mistake or hint, never going below 1.
+- **Mistakes:** a digit that differs from the solution counts as a mistake. When the mistake limit is reached, the game ends.
+- **Clocks:** when the time runs out, the game ends. The top bar shows the time left.
+
 ## Testing
 
 Pure game logic has unit tests next to the code, in `src/sudoku/*.test.ts` and `src/challenges.test.ts`. Run them with `npm test`. Tests cover the solver, puzzle generation, rules, progress, stats, persistence and the motivation messages.

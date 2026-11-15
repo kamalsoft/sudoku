@@ -36,7 +36,7 @@ function makeStyles(c: Palette) {
   return StyleSheet.create({
     toast: {
       position: 'absolute',
-      top: 8,
+      top: 64,
       alignSelf: 'center',
       paddingHorizontal: 16,
       paddingVertical: 8,

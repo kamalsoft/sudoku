@@ -8,12 +8,14 @@ import type { Mode } from '../sudoku/moves';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
+// Keys have a fixed height so the whole pad fits on screen beside the board. Nothing here scrolls.
+export const PAD_KEY_HEIGHT = 44;
+
 interface Props {
   width: number;
 }
 
-// Digits are always shown. Erase clears the selected cell in one tap.
-// Pencil and Fill notes appear only while Notes is on in Settings.
+// Digits 1 to 9, then Pencil, Erase and Hint. Pencil shows only while Notes is on in Settings.
 export function NumberPad({ width }: Props) {
   const c = useColors();
   const t = useT();
@@ -26,10 +28,9 @@ export function NumberPad({ width }: Props) {
   const hintsUsed = useGameStore((s) => s.hints);
   const hintsOn = usePrefs((s) => s.hints);
   const hintLimit = usePrefs((s) => s.hintLimit);
-  const hintsLeft = hintLimit === null ? null : Math.max(0, hintLimit - hintsUsed);
-  const fillNotes = useGameStore((s) => s.fillNotes);
   const notes = usePrefs((s) => s.notes);
   const largeDigits = usePrefs((s) => s.largeDigits);
+  const hintsLeft = hintLimit === null ? null : Math.max(0, hintLimit - hintsUsed);
   const gap = 8;
   const keySize = (width - gap * 2) / 3;
 
@@ -58,24 +59,12 @@ export function NumberPad({ width }: Props) {
             accessibilityRole="button"
             accessibilityLabel={`Digit ${n + 1}`}
             onPress={() => inputDigit(n + 1)}
-            style={({ pressed }) => [styles.key, { width: keySize, height: keySize * 0.6, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+            style={({ pressed }) => [styles.key, { width: keySize, height: PAD_KEY_HEIGHT, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
           >
-            <Text style={[styles.keyText, largeDigits && { fontSize: 31 }]}>{n + 1}</Text>
+            <Text style={[styles.keyText, largeDigits && { fontSize: 30 }]}>{n + 1}</Text>
           </Pressable>
         ))}
       </View>
-      {hintsOn ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Hint"
-          accessibilityHint="Fills the selected empty cell with the right digit. It does not count as a mistake."
-          disabled={hintsLeft === 0}
-          onPress={useHint}
-          style={[styles.hint, hintsLeft === 0 && styles.disabled]}
-        >
-          <Text style={styles.toolText}>{t('hint')}{hintsLeft === null ? '' : ` · ${hintsLeft} ${t('left')}`}</Text>
-        </Pressable>
-      ) : null}
       <View style={[styles.row, { gap }]}>
         {notes ? pencilTool('pencil', t('pencil')) : null}
         <Pressable
@@ -88,9 +77,16 @@ export function NumberPad({ width }: Props) {
           <MaterialCommunityIcons name="eraser" size={20} color={c.text} />
           <Text style={styles.toolText}>{t('erase')}</Text>
         </Pressable>
-        {notes ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.tool}>
-            <Text style={styles.toolText}>{t('fill_notes')}</Text>
+        {hintsOn ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Hint"
+            accessibilityHint="Fills the selected empty cell with the right digit. It does not count as a mistake."
+            disabled={hintsLeft === 0}
+            onPress={useHint}
+            style={[styles.tool, styles.hint, hintsLeft === 0 && styles.disabled]}
+          >
+            <Text style={styles.toolText}>{t('hint')}{hintsLeft === null ? '' : ` · ${hintsLeft}`}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -126,7 +122,7 @@ function makeStyles(c: Palette) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      height: 48,
+      height: 44,
       borderRadius: c.radius,
       borderWidth: 2,
       borderColor: c.line,
@@ -139,13 +135,7 @@ function makeStyles(c: Palette) {
       backgroundColor: c.line,
     },
     hint: {
-      height: 48,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: c.radius,
-      borderWidth: 2,
       borderColor: c.accent,
-      backgroundColor: c.surface,
     },
     disabled: {
       opacity: 0.4,
@@ -155,7 +145,7 @@ function makeStyles(c: Palette) {
       borderColor: c.accent,
     },
     toolText: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color: c.text,
     },

@@ -74,6 +74,12 @@ const STRINGS = {
     confirm_delete: 'Tap again to delete',
     playing_as: 'Playing as {name}',
     about: 'About this app',
+    menu: 'Menu',
+    close: 'Close',
+    level: 'Level',
+    time_limit: 'Time limit',
+    game: 'Game',
+    pages: 'More',
   },
   es: {
     new_game: 'Nuevo juego',
@@ -141,6 +147,12 @@ const STRINGS = {
     confirm_delete: 'Toca otra vez para eliminar',
     playing_as: 'Jugando como {name}',
     about: 'Acerca de la app',
+    menu: 'Menú',
+    close: 'Cerrar',
+    level: 'Nivel',
+    time_limit: 'Tiempo límite',
+    game: 'Juego',
+    pages: 'Más',
   },
 } as const;
 

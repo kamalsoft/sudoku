@@ -5,6 +5,8 @@ import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
 import { ANIMALS } from '../components/AnimalFriends';
+import { useProfiles } from '../profiles';
+import { LANGUAGES, useT } from '../i18n';
 import { useInstall } from '../install';
 import { THEME_NAMES, THEMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
@@ -43,7 +45,13 @@ export default function SettingsScreen() {
   const sound = usePrefs((s) => s.sound);
   const haptics = usePrefs((s) => s.haptics);
   const update = usePrefs((s) => s.update);
+  const t = useT();
+  const language = usePrefs((s) => s.language);
   const kidSafe = usePrefs((s) => s.kidSafe);
+  const profiles = useProfiles((s) => s.profiles);
+  const activeProfile = useProfiles((s) => s.activeId);
+  const switchProfile = useProfiles((s) => s.switchTo);
+  const addProfile = useProfiles((s) => s.add);
   const hints = usePrefs((s) => s.hints);
   const hintLimit = usePrefs((s) => s.hintLimit);
   const badges = usePrefs((s) => s.badges);
@@ -61,12 +69,16 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('back')}</Text>
           </Pressable>
-          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.title}>{t('title_settings')}</Text>
         </View>
 
-        <Group title="Appearance">
+        <Group title={t('group_appearance')}>
+          <View style={styles.rowPlain}>
+            <Text style={[styles.label, styles.labelGrow]}>{t('row_language')}</Text>
+            <Segmented styles={styles} c={c} options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))} value={language} onChange={(v) => update('language', v)} />
+          </View>
           {THEME_NAMES.map((name, i) => {
             const active = name === theme;
             const palette = THEMES[name];
@@ -93,31 +105,31 @@ export default function SettingsScreen() {
         </Group>
 
         <Group
-          title="Gameplay"
+          title={t('group_gameplay')}
           footer="Casual never ends a game. In a capped game, a wrong digit counts as a mistake, and reaching the limit ends it."
         >
           <View style={[styles.rowPlain, kidSafe && styles.disabled]} pointerEvents={kidSafe ? 'none' : 'auto'}>
-            <Text style={[styles.label, styles.labelGrow]}>Mistake limit</Text>
+            <Text style={[styles.label, styles.labelGrow]}>{t('row_mistake_limit')}</Text>
             <Segmented styles={styles} c={c} options={MISTAKE_LIMITS} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
           </View>
-          <ToggleRow styles={styles} c={c} label="Notes" value={notes} onChange={(v) => update('notes', v)} />
-          <ToggleRow styles={styles} c={c} label="Hints" value={hints} onChange={(v) => update('hints', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_notes')} value={notes} onChange={(v) => update('notes', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_hints')} value={hints} onChange={(v) => update('hints', v)} />
           <View style={styles.rowPlain}>
-            <Text style={[styles.label, styles.labelGrow]}>Hints per game</Text>
+            <Text style={[styles.label, styles.labelGrow]}>{t('row_hints_per_game')}</Text>
             <Segmented styles={styles} c={c} options={HINT_LIMITS} value={hintLimit} onChange={(v) => update('hintLimit', v)} />
           </View>
-          <ToggleRow styles={styles} c={c} label="Stars and badges" value={badges} onChange={(v) => update('badges', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_stars_badges')} value={badges} onChange={(v) => update('badges', v)} />
           <ToggleRow
             styles={styles}
             c={c}
-            label="Level up"
+            label={t('row_level_up')}
             value={levelUp}
             onChange={(v) => update('levelUp', v)}
           />
           <ToggleRow
             styles={styles}
             c={c}
-            label="Auto-notes"
+            label={t('row_auto_notes')}
             value={autoNotes}
             disabled={!notes}
             last
@@ -126,12 +138,12 @@ export default function SettingsScreen() {
         </Group>
 
         <Group
-          title="Kids"
+          title={t('group_kids')}
           footer={kidSafe ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.' : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.'}
         >
-          <ToggleRow styles={styles} c={c} label="Kid-safe mode" value={kidSafe} onChange={(v) => update('kidSafe', v)} />
-          <ToggleRow styles={styles} c={c} label="Rewards with animal friends" value={rewards} onChange={(v) => update('rewards', v)} />
-          <ToggleRow styles={styles} c={c} label="Parent lock" value={parentLock} onChange={(v) => update('parentLock', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_kid_safe')} value={kidSafe} onChange={(v) => update('kidSafe', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_rewards')} value={rewards} onChange={(v) => update('rewards', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_parent_lock')} value={parentLock} onChange={(v) => update('parentLock', v)} />
           <View style={styles.animalRow}>
             <Text style={styles.label}>Animal friends</Text>
             <View style={styles.animalChips} accessibilityRole="radiogroup">
@@ -155,18 +167,43 @@ export default function SettingsScreen() {
           </View>
         </Group>
 
-        <Group title="Comfort" footer="Bigger digits, and colour-blind markers: a ! for wrong cells and a diamond for matching numbers.">
-          <ToggleRow styles={styles} c={c} label="Large digits" value={largeDigits} onChange={(v) => update('largeDigits', v)} />
-          <ToggleRow styles={styles} c={c} label="Colour-blind friendly" value={colorBlind} last onChange={(v) => update('colorBlind', v)} />
+        <Group title={t('group_comfort')} footer="Bigger digits, and colour-blind markers: a ! for wrong cells and a diamond for matching numbers.">
+          <ToggleRow styles={styles} c={c} label={t('row_large_digits')} value={largeDigits} onChange={(v) => update('largeDigits', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_colour_blind')} value={colorBlind} last onChange={(v) => update('colorBlind', v)} />
         </Group>
 
-        <Group title="Feedback" footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>
-          <ToggleRow styles={styles} c={c} label="Sound" value={sound} onChange={(v) => update('sound', v)} />
-          <ToggleRow styles={styles} c={c} label="Haptic feedback" value={haptics} last onChange={(v) => update('haptics', v)} />
+        <Group title={t('group_feedback')} footer={Platform.OS === 'web' ? 'Haptics work on phones and tablets only.' : undefined}>
+          <ToggleRow styles={styles} c={c} label={t('row_sound')} value={sound} onChange={(v) => update('sound', v)} />
+          <ToggleRow styles={styles} c={c} label={t('row_haptics')} value={haptics} last onChange={(v) => update('haptics', v)} />
+        </Group>
+
+        <Group title={t('group_players')} footer="Each player has their own games, stats and settings on this device.">
+          <View style={styles.animalRow}>
+            <View style={styles.animalChips} accessibilityRole="radiogroup">
+              {profiles.map((p) => {
+                const on = p.id === activeProfile;
+                return (
+                  <Pressable
+                    key={p.id}
+                    accessibilityRole="radio"
+                    accessibilityLabel={p.name}
+                    aria-checked={on}
+                    onPress={() => void switchProfile(p.id)}
+                    style={[styles.animalChip, on && { backgroundColor: c.accent, borderColor: c.accent }]}
+                  >
+                    <Text style={[styles.animalName, { color: on ? c.onAccent : c.text }]}>{p.name}</Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable accessibilityRole="button" onPress={() => void addProfile()} style={styles.animalChip}>
+                <Text style={[styles.animalName, { color: c.accent }]}>{t('add_player')}</Text>
+              </Pressable>
+            </View>
+          </View>
         </Group>
 
         <Group
-          title="About"
+          title={t('group_about')}
           footer={Platform.OS === 'web' && !installed && ios ? 'On iPhone or iPad, tap Share, then Add to Home Screen.' : undefined}
         >
           {Platform.OS === 'web' ? (
@@ -180,7 +217,7 @@ export default function SettingsScreen() {
               }
             />
           ) : null}
-          <Row styles={styles} label="Version" last trailing={<Text style={styles.value}>{version}</Text>} />
+          <Row styles={styles} label={t('row_version')} last trailing={<Text style={styles.value}>{version}</Text>} />
         </Group>
       </ScrollView>
     </SafeAreaView>
@@ -279,7 +316,7 @@ function ToggleRow({
 }
 
 // Small segmented control for a short list of choices.
-function Segmented<T extends number | null>({
+function Segmented<T extends number | string | null>({
   styles,
   c,
   options,
@@ -300,7 +337,7 @@ function Segmented<T extends number | null>({
           <Pressable
             key={String(o.value)}
             accessibilityRole="radio"
-            accessibilityLabel={o.value === null ? 'Casual, no limit' : `${o.label} mistakes`}
+            accessibilityLabel={typeof o.value === 'number' ? `${o.label} mistakes` : o.value === null ? o.label : String(o.value)}
             aria-checked={active}
             onPress={() => onChange(o.value)}
             style={[styles.segment, active && { backgroundColor: c.accent }]}

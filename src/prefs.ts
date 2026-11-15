@@ -27,6 +27,8 @@ interface Prefs {
   colorBlind: boolean;
   // Settings ask a grown-up sum before opening.
   parentLock: boolean;
+  // Interface language.
+  language: 'en' | 'es';
   // Animal friends that walk across the game screen, by id from AnimalFriends.
   animals: string[];
 }
@@ -53,6 +55,7 @@ const DEFAULTS: Prefs = {
   largeDigits: false,
   colorBlind: false,
   parentLock: false,
+  language: 'en',
   animals: [],
 };
 

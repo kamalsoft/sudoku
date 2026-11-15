@@ -55,6 +55,7 @@ interface GameState {
   // Local day of the daily challenge being played, or null for a normal game.
   daily: string | null;
   init: () => Promise<void>;
+  reload: () => Promise<void>;
   selectCell: (index: number) => void;
   moveSelection: (dRow: number, dCol: number) => void;
   setMode: (mode: Mode) => void;
@@ -75,6 +76,11 @@ interface GameState {
 
 // Writes run one at a time, in the order they were requested, on the single database connection.
 let writes: Promise<unknown> = Promise.resolve();
+
+// Resolves once every save requested so far has finished. Used before switching profiles.
+export function flushWrites(): Promise<unknown> {
+  return writes;
+}
 function enqueue(task: () => Promise<unknown>) {
   writes = writes.then(task).catch((error) => console.warn('Storage write failed', error));
 }
@@ -399,6 +405,13 @@ export const useGameStore = create<GameState>()((set, get) => {
         get().timeLimitMs,
         null,
       );
+    },
+
+    // Starts the game again for the active profile, for example after switching profiles.
+    reload: async () => {
+      initializing = null;
+      set({ ready: false });
+      await get().init();
     },
 
     startDaily: () => get().newGame('medium', get().timeLimitMs, dayKey(new Date())),

@@ -2,29 +2,43 @@ import { getDb } from './database';
 import type { SessionRecord } from '../sudoku/session';
 import type { GameRecord } from '../sudoku/stats';
 
+// Everything except the profile list and the active profile is kept per profile. The default profile uses the
+// original keys, so data saved before profiles existed is still found.
+let profile = 'default';
+export function setProfile(id: string) {
+  profile = id;
+}
+
+const scoped = (key: string, p: string) => (p === 'default' ? key : `${p}:${key}`);
+
 export async function loadSessionRaw(): Promise<string | null> {
+  const p = profile;
   const db = await getDb();
-  const row = await db.getFirstAsync<{ data: string }>('SELECT data FROM active_session WHERE id = 1');
+  const row = await db.getFirstAsync<{ data: string }>('SELECT data FROM profile_sessions WHERE profile = ?', p);
   return row?.data ?? null;
 }
 
 export async function saveSession(session: SessionRecord): Promise<void> {
+  const p = profile;
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO active_session (id, data) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data',
+    'INSERT INTO profile_sessions (profile, data) VALUES (?, ?) ON CONFLICT(profile) DO UPDATE SET data = excluded.data',
+    p,
     JSON.stringify(session),
   );
 }
 
 export async function clearSession(): Promise<void> {
+  const p = profile;
   const db = await getDb();
-  await db.runAsync('DELETE FROM active_session WHERE id = 1');
+  await db.runAsync('DELETE FROM profile_sessions WHERE profile = ?', p);
 }
 
 export async function recordGame(game: GameRecord): Promise<void> {
+  const p = profile;
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at, daily, puzzle, mistakes, hints, stars) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO game_history (difficulty, won, elapsed_ms, day, completed_at, daily, puzzle, mistakes, hints, stars, profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     game.difficulty,
     game.won ? 1 : 0,
     Math.round(game.elapsedMs),
@@ -35,10 +49,12 @@ export async function recordGame(game: GameRecord): Promise<void> {
     game.mistakes ?? 0,
     game.hints ?? 0,
     game.stars ?? 0,
+    p,
   );
 }
 
 export async function loadGames(): Promise<GameRecord[]> {
+  const p = profile;
   const db = await getDb();
   const rows = await db.getAllAsync<{
     difficulty: GameRecord['difficulty'];
@@ -51,7 +67,10 @@ export async function loadGames(): Promise<GameRecord[]> {
     hints: number;
     stars: number;
     completed_at: string;
-  }>('SELECT difficulty, won, elapsed_ms, day, daily, puzzle, mistakes, hints, stars, completed_at FROM game_history ORDER BY id');
+  }>(
+    'SELECT difficulty, won, elapsed_ms, day, daily, puzzle, mistakes, hints, stars, completed_at FROM game_history WHERE profile = ? ORDER BY id',
+    p,
+  );
   return rows.map((r) => ({
     difficulty: r.difficulty,
     won: r.won === 1,
@@ -67,12 +86,30 @@ export async function loadGames(): Promise<GameRecord[]> {
 }
 
 export async function getSetting(key: string): Promise<string | null> {
+  const k = scoped(key, profile);
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM user_settings WHERE key = ?', k);
+  return row?.value ?? null;
+}
+
+export async function setSetting(key: string, value: string): Promise<void> {
+  const k = scoped(key, profile);
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO user_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    k,
+    value,
+  );
+}
+
+// Settings that belong to the device, not to a profile (the profile list and which one is active).
+export async function getGlobalSetting(key: string): Promise<string | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM user_settings WHERE key = ?', key);
   return row?.value ?? null;
 }
 
-export async function setSetting(key: string, value: string): Promise<void> {
+export async function setGlobalSetting(key: string, value: string): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     'INSERT INTO user_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',

@@ -25,6 +25,12 @@ Every feature below is switched on or off in Settings, unless it is a fixed part
 |---|---|---|
 | Language | Language: English, Español | Interface text switches. Strings not yet translated fall back to English. |
 
+## Status
+- Done and checked in Chrome: hints, level up, parent gate, language (Spanish and English), profiles (add and switch), replay data.
+- Done and unit-tested: stars, badges, weekly summary, level unlocks, solver for replay, schema v3 and v4 migrations.
+- Built but not browser-checked yet: replay button, badges and recent games on Stats, parent summary, reward parade, large digits, colour-blind markers.
+- Translated: game header, number pad, celebration, grown-up gate, Settings. Stats and the parent summary are still English.
+
 ## Not in this work
 - Sound tuning: the clips are synthesized and I can't listen to them. Needs ears and a decision on the sound.
 - Native release builds, store listings, and the iOS build: need your Apple and Google accounts.

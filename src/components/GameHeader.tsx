@@ -7,22 +7,24 @@ import { elapsedMs, remainingMs } from '../sudoku/session';
 import { guardedMistakeLimit, guardedTimeLimit } from '../sudoku/rules';
 import { unlockedLevels } from '../sudoku/progress';
 import { askGrownUp } from '../gate';
+import { useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { useProgress } from '../sudoku/progressStore';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
-  { value: 'expert', label: 'Expert' },
-  { value: 'evil', label: 'Evil' },
+const DIFFICULTIES: { value: Difficulty; label: StringKey }[] = [
+  { value: 'easy', label: 'easy' },
+  { value: 'medium', label: 'medium' },
+  { value: 'hard', label: 'hard' },
+  { value: 'expert', label: 'expert' },
+  { value: 'evil', label: 'evil' },
 ];
 
-const TIME_LIMITS: { value: number | null; label: string }[] = [
-  { value: null, label: 'No limit' },
+const TIME_LIMITS: { value: number | null; label: string; key?: StringKey }[] = [
+  { value: null, label: 'No limit', key: 'no_limit' },
   { value: 5 * 60_000, label: '5 min' },
   { value: 10 * 60_000, label: '10 min' },
   { value: 15 * 60_000, label: '15 min' },
@@ -34,6 +36,7 @@ interface Props {
 
 export function GameHeader({ width }: Props) {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const difficulty = useGameStore((s) => s.difficulty);
   const solved = useGameStore((s) => s.solved);
@@ -64,16 +67,16 @@ export function GameHeader({ width }: Props) {
 
   const elapsed = elapsedMs(accumulated, runningSince, now);
   const status = solved
-    ? 'Solved!'
+    ? t('solved')
     : failed === 'time'
-      ? "Time's up"
+      ? t('times_up')
       : failed === 'mistakes'
-        ? 'Out of mistakes'
+        ? t('out_of_mistakes')
         : timeLimitMs !== null
-          ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} left`
+          ? `${formatDuration(remainingMs(timeLimitMs, elapsed))} ${t('left')}`
           : running
             ? formatDuration(elapsed)
-            : 'Paused';
+            : t('paused');
 
   return (
     <View style={[styles.header, { width }]}>
@@ -84,10 +87,10 @@ export function GameHeader({ width }: Props) {
       </Text>
       {mistakeLimit !== null || mistakes > 0 ? (
         <Text style={styles.status}>
-          {mistakeLimit !== null ? `Mistakes ${mistakes} of ${mistakeLimit}` : `Mistakes ${mistakes}`}
+          {mistakeLimit !== null ? `${t('mistakes')} ${mistakes} ${t('of')} ${mistakeLimit}` : `${t('mistakes')} ${mistakes}`}
         </Text>
       ) : null}
-      {daily !== null ? <Text style={styles.status}>Daily challenge · {daily}</Text> : null}
+      {daily !== null ? <Text style={styles.status}>{t('daily_challenge')} · {daily}</Text> : null}
 
       <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Difficulty">
         {DIFFICULTIES.map((d) => {
@@ -97,32 +100,32 @@ export function GameHeader({ width }: Props) {
             <Pressable
               key={d.value}
               accessibilityRole="radio"
-              accessibilityLabel={locked ? `${d.label}, locked` : d.label}
+              accessibilityLabel={locked ? `${t(d.label)}, locked` : t(d.label)}
               aria-checked={active}
               aria-disabled={locked}
               disabled={locked}
               onPress={() => newGame(d.value)}
               style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive, locked && styles.locked]}>{locked ? `🔒 ${d.label}` : d.label}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive, locked && styles.locked]}>{locked ? `🔒 ${t(d.label)}` : t(d.label)}</Text>
             </Pressable>
           );
         })}
       </View>
 
       <View style={[styles.row, kidSafe && styles.dimmed]} accessibilityRole="radiogroup" accessibilityLabel="Time limit">
-        {TIME_LIMITS.map((t) => {
-          const active = t.value === timeLimitMs;
+        {TIME_LIMITS.map((limit) => {
+          const active = limit.value === timeLimitMs;
           return (
             <Pressable
-              key={t.label}
+              key={limit.label}
               accessibilityRole="radio"
               aria-checked={active}
               disabled={kidSafe}
-              onPress={() => setTimeLimit(t.value)}
+              onPress={() => setTimeLimit(limit.value)}
               style={({ pressed }) => [styles.chip, active && styles.chipActive, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t.label}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{limit.key ? t(limit.key) : limit.label}</Text>
             </Pressable>
           );
         })}
@@ -130,16 +133,16 @@ export function GameHeader({ width }: Props) {
 
       <View style={styles.row}>
         <Pressable accessibilityRole="button" onPress={() => newGame(difficulty)} style={styles.action}>
-          <Text style={styles.actionText}>New game</Text>
+          <Text style={styles.actionText}>{t('new_game')}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={startDaily} style={styles.actionOutline}>
-          <Text style={styles.actionOutlineText}>Daily</Text>
+          <Text style={styles.actionOutlineText}>{t('daily')}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/stats')} style={styles.actionOutline}>
-          <Text style={styles.actionOutlineText}>Stats</Text>
+          <Text style={styles.actionOutlineText}>{t('stats')}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => askGrownUp(() => router.push('/settings'))} style={styles.actionOutline}>
-          <Text style={styles.actionOutlineText}>Settings</Text>
+          <Text style={styles.actionOutlineText}>{t('settings')}</Text>
         </Pressable>
       </View>
     </View>

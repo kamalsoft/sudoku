@@ -11,6 +11,7 @@ import { useGameLifecycle } from '../hooks/useGameLifecycle';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { useEntrance } from '../motion';
 import { usePrefs } from '../prefs';
+import { bootApp } from '../profiles';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
@@ -22,13 +23,11 @@ const SIDE_WIDTH = 300;
 export default function GameRoute() {
   const c = useColors();
   const ready = useGameStore((s) => s.ready);
-  const init = useGameStore((s) => s.init);
   const prefsReady = usePrefs((s) => s.ready);
 
   useEffect(() => {
-    void init();
-    void usePrefs.getState().load();
-  }, [init]);
+    void bootApp();
+  }, []);
 
   if (!ready || !prefsReady) {
     return (

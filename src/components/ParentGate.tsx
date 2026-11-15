@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGate } from '../gate';
+import { useT } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 // A grown-up's check before Settings or the parent summary opens. Shown above every screen.
 export function ParentGate() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { open, a, b, options, answer, onPass, close } = useGate();
   const [wrong, setWrong] = useState(false);
@@ -27,10 +29,8 @@ export function ParentGate() {
   return (
     <View style={styles.backdrop} accessibilityViewIsModal>
       <View style={styles.card}>
-        <Text style={styles.heading}>For grown-ups</Text>
-        <Text style={styles.question} accessibilityLabel={`What is ${a} plus ${b}?`}>
-          What is {a} + {b}?
-        </Text>
+        <Text style={styles.heading}>{t('grown_ups')}</Text>
+        <Text style={styles.question}>{t('gate_question', { a, b })}</Text>
         <View style={styles.options}>
           {options.map((n) => (
             <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n}`} onPress={() => pick(n)} style={styles.option}>
@@ -38,9 +38,9 @@ export function ParentGate() {
             </Pressable>
           ))}
         </View>
-        {wrong ? <Text style={styles.hint}>Not quite. Try again.</Text> : null}
+        {wrong ? <Text style={styles.hint}>{t('gate_wrong')}</Text> : null}
         <Pressable accessibilityRole="button" onPress={() => { setWrong(false); close(); }} style={styles.cancel}>
-          <Text style={styles.cancelText}>Not now</Text>
+          <Text style={styles.cancelText}>{t('not_now')}</Text>
         </Pressable>
       </View>
     </View>

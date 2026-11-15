@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePrefs } from '../prefs';
+import { useT } from '../i18n';
 import { useGameStore } from '../sudoku/store';
 import type { Mode } from '../sudoku/moves';
 import { useColors } from '../theme';
@@ -15,6 +16,7 @@ interface Props {
 // Pencil and Fill notes appear only while Notes is on in Settings.
 export function NumberPad({ width }: Props) {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const mode = useGameStore((s) => s.mode);
   const setMode = useGameStore((s) => s.setMode);
@@ -71,11 +73,11 @@ export function NumberPad({ width }: Props) {
           onPress={useHint}
           style={[styles.hint, hintsLeft === 0 && styles.disabled]}
         >
-          <Text style={styles.toolText}>Hint{hintsLeft === null ? '' : ` · ${hintsLeft} left`}</Text>
+          <Text style={styles.toolText}>{t('hint')}{hintsLeft === null ? '' : ` · ${hintsLeft} ${t('left')}`}</Text>
         </Pressable>
       ) : null}
       <View style={[styles.row, { gap }]}>
-        {notes ? pencilTool('pencil', 'Pencil') : null}
+        {notes ? pencilTool('pencil', t('pencil')) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Erase selected cell"
@@ -84,11 +86,11 @@ export function NumberPad({ width }: Props) {
           style={({ pressed }) => [styles.tool, styles.erase, pressed && styles.erasePressed]}
         >
           <MaterialCommunityIcons name="eraser" size={20} color={c.text} />
-          <Text style={styles.toolText}>Erase</Text>
+          <Text style={styles.toolText}>{t('erase')}</Text>
         </Pressable>
         {notes ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Fill notes" onPress={fillNotes} style={styles.tool}>
-            <Text style={styles.toolText}>Fill notes</Text>
+            <Text style={styles.toolText}>{t('fill_notes')}</Text>
           </Pressable>
         ) : null}
       </View>

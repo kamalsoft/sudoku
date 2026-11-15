@@ -7,12 +7,14 @@ import { useProgress } from '../sudoku/progressStore';
 import { usePrefs } from '../prefs';
 import { ANIMALS } from './AnimalFriends';
 import { useReduceMotion } from '../motion';
+import { useT } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 // Shown when the puzzle is solved. It cross-fades in, and cross-fades out when dismissed.
 export function CelebrationOverlay() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const reduce = useReduceMotion();
   const solved = useGameStore((s) => s.solved);
@@ -63,22 +65,22 @@ export function CelebrationOverlay() {
             {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}
           </Text>
         ) : null}
-        <Text style={styles.title}>Puzzle complete!</Text>
-        {daily !== null ? <Text style={styles.daily}>Daily star!</Text> : null}
+        <Text style={styles.title}>{t('complete')}</Text>
+        {daily !== null ? <Text style={styles.daily}>{t('daily_star')}</Text> : null}
         <Text style={styles.body}>
           {formatDuration(accumulatedMs)} · {mistakes} {mistakes === 1 ? 'mistake' : 'mistakes'}
           {hints > 0 ? ` · ${hints} ${hints === 1 ? 'hint' : 'hints'}` : ''}
         </Text>
         {badgesOn && earned.length > 0 ? (
-          <Text style={styles.badge} accessibilityLiveRegion="polite">New badge: {earned.join(', ')}</Text>
+          <Text style={styles.badge} accessibilityLiveRegion="polite">{t('new_badge')}: {earned.join(', ')}</Text>
         ) : null}
         {parade.length > 0 && (daily !== null || earned.length > 0) ? <AnimalParade animals={parade.map((a) => a.emoji)} reduce={reduce} /> : null}
         <View style={styles.actions}>
           <Pressable accessibilityRole="button" onPress={() => newGame(difficulty)} style={styles.primary}>
-            <Text style={styles.primaryText}>Play again</Text>
+            <Text style={styles.primaryText}>{t('play_again')}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={dismiss} style={styles.secondary}>
-            <Text style={styles.secondaryText}>Look at it</Text>
+            <Text style={styles.secondaryText}>{t('look_at_it')}</Text>
           </Pressable>
         </View>
       </Animated.View>

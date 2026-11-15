@@ -50,5 +50,16 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       `);
     });
   }
+  if (current < 4) {
+    await db.withTransactionAsync(async () => {
+      // One saved game per profile. The old single row moves to the default profile.
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS profile_sessions (profile TEXT PRIMARY KEY NOT NULL, data TEXT NOT NULL);
+        INSERT OR IGNORE INTO profile_sessions (profile, data) SELECT 'default', data FROM active_session WHERE id = 1;
+        ALTER TABLE game_history ADD COLUMN profile TEXT NOT NULL DEFAULT 'default';
+        PRAGMA user_version = 4;
+      `);
+    });
+  }
   return db;
 }

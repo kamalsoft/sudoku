@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { askGrownUp } from '../gate';
 import { useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { usePrefs } from '../prefs';
 import { useMenu } from '../menu';
 import { useInstall } from '../install';
@@ -17,20 +18,17 @@ import { CASUAL_DAILY_WINS, CASUAL_MAX_LEVEL, casualWinsOn, isCasual, levelAllow
 import { dayKey } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
 import { CHALLENGES } from '../challenges';
-import type { StringKey } from '../i18n';
+import type { Challenge } from '../challenges';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-const DIFFICULTIES: { value: Difficulty; label: Difficulty }[] = LEVELS.map((level) => ({ value: level, label: level }));
+type Tab = 'play' | 'challenges' | 'more';
+type Icon = keyof typeof MaterialCommunityIcons.glyphMap;
 
-// Menu tabs: what to play, the challenges, the other screens, and help.
-type Tab = 'play' | 'challenges' | 'more' | 'help';
-
-const TABS: { id: Tab; labelKey: StringKey; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { id: 'play', labelKey: 'tab_play', icon: 'gamepad-variant-outline' },
-  { id: 'challenges', labelKey: 'challenges', icon: 'trophy-outline' },
-  { id: 'more', labelKey: 'pages', icon: 'chart-bar' },
-  { id: 'help', labelKey: 'help', icon: 'help-circle-outline' },
+const TABS: { id: Tab; label: StringKey; icon: Icon }[] = [
+  { id: 'play', label: 'tab_play', icon: 'gamepad-variant-outline' },
+  { id: 'challenges', label: 'challenges', icon: 'trophy-outline' },
+  { id: 'more', label: 'pages', icon: 'dots-horizontal-circle-outline' },
 ];
 
 // Challenges are grouped by how hard they feel, so the list reads from gentle to fierce.
@@ -48,7 +46,7 @@ const TIME_LIMITS: { value: number | null; label: string; key?: 'no_limit' }[] =
   { value: 15 * 60_000, label: '15 min' },
 ];
 
-// The game menu, split into tabs so each one has a single job. It opens over the game.
+// The game menu, in three tabs: Play (what to play next), Challenges, and More (player, progress and help).
 export function MenuPanel() {
   const c = useColors();
   const t = useT();
@@ -58,11 +56,11 @@ export function MenuPanel() {
   const [tab, setTab] = useState<Tab>('play');
   const difficulty = useGameStore((s) => s.difficulty);
   const timeLimitMs = useGameStore((s) => s.timeLimitMs);
+  const challenge = useGameStore((s) => s.challenge);
   const newGame = useGameStore((s) => s.newGame);
   const setTimeLimit = useGameStore((s) => s.setTimeLimit);
   const startDaily = useGameStore((s) => s.startDaily);
   const startChallenge = useGameStore((s) => s.startChallenge);
-  const challenge = useGameStore((s) => s.challenge);
   const fillNotes = useGameStore((s) => s.fillNotes);
   const kidSafe = usePrefs((s) => s.kidSafe);
   const notes = usePrefs((s) => s.notes);
@@ -75,11 +73,9 @@ export function MenuPanel() {
   const casualWins = casualWinsOn(games, dayKey(new Date()));
   const allowed = (level: Difficulty) => levelAllowed(level, casual, casualWins);
   const won = new Set(games.filter((g) => g.won && g.qualified !== false && g.challenge).map((g) => g.challenge));
-  const activeName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
   const profiles = useProfiles((s) => s.profiles);
   const activeId = useProfiles((s) => s.activeId);
   const switchTo = useProfiles((s) => s.switchTo);
-
   const install = useInstall();
 
   const go = (path: '/stats' | '/settings' | '/about' | '/howto' | '/privacy' | '/terms', gated = false) => {
@@ -93,30 +89,33 @@ export function MenuPanel() {
     hide();
   };
 
-  const renderChallenge = (ch: (typeof CHALLENGES)[number]) => {
+  const renderChallenge = (ch: Challenge) => {
     const active = ch.id === challenge;
     const locked = !levelAllowed(ch.level, isCasual(kidSafe, ch.mistakes), casualWins);
     const done = won.has(ch.id);
-    const time = ch.minutes === null ? t('no_limit') : `${ch.minutes} min`;
-    const hints = ch.hintLimit === null ? t('no_limit') : ch.hintLimit === 0 ? t('no_hints') : t(ch.hintLimit === 1 ? 'hint_one' : 'hint_many', { n: ch.hintLimit });
+    const name = t(`challenge_${ch.id}` as StringKey);
+    const hints = ch.hintLimit === null ? t('unlimited') : ch.hintLimit === 0 ? t('no_hints') : t(ch.hintLimit === 1 ? 'hint_one' : 'hint_many', { n: ch.hintLimit });
     return (
       <Pressable
         key={ch.id}
         accessibilityRole="radio"
-        accessibilityLabel={`${t(`challenge_${ch.id}` as StringKey)}${done ? `, ${t('challenge_won')}` : ''}`}
+        accessibilityLabel={`${name}${done ? `, ${t('challenge_won')}` : ''}`}
         aria-checked={active}
         aria-disabled={locked}
         disabled={locked}
         onPress={() => act(() => startChallenge(ch.id))}
-        style={[styles.challenge, active && styles.chipOn, locked && styles.locked]}
+        style={[styles.card, active && styles.cardOn, locked && styles.dimmed]}
       >
-        <View style={styles.challengeTop}>
-          <Text style={[styles.chipText, active && styles.chipTextOn]}>{t(`challenge_${ch.id}` as StringKey)}</Text>
-          {done ? <MaterialCommunityIcons name="check-circle" size={18} color={active ? c.onAccent : c.accent} /> : null}
+        <View style={styles.cardTop}>
+          <Text style={[styles.cardTitle, active && styles.onAccent]}>{name}</Text>
+          {done ? <MaterialCommunityIcons name="check-circle" size={20} color={active ? c.onAccent : c.accent} /> : null}
         </View>
-        <Text style={[styles.challengeDetail, active && styles.chipTextOn]}>
-          {[t(ch.level), time, `${t('mistakes')} ${ch.mistakes}`, hints].join(' · ')}
-        </Text>
+        <View style={styles.facts}>
+          <Fact icon="signal-cellular-2" text={t(ch.level)} on={active} styles={styles} c={c} />
+          <Fact icon="timer-outline" text={ch.minutes === null ? t('no_clock') : `${ch.minutes} min`} on={active} styles={styles} c={c} />
+          <Fact icon="alert-circle-outline" text={`${t('mistakes')}: ${ch.mistakes}`} on={active} styles={styles} c={c} />
+          <Fact icon="lightbulb-outline" text={hints} on={active} styles={styles} c={c} />
+        </View>
       </Pressable>
     );
   };
@@ -130,16 +129,10 @@ export function MenuPanel() {
           {TABS.map((item) => {
             const on = item.id === tab;
             return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="tab"
-                aria-selected={on}
-                onPress={() => setTab(item.id)}
-                style={[styles.tab, on && styles.tabOn]}
-              >
-                <MaterialCommunityIcons name={item.icon} size={20} color={on ? c.accent : c.muted} />
-                <Text style={[styles.tabText, on && styles.tabTextOn]} numberOfLines={1}>
-                  {t(item.labelKey)}
+              <Pressable key={item.id} accessibilityRole="tab" aria-selected={on} onPress={() => setTab(item.id)} style={[styles.tab, on && styles.tabOn]}>
+                <MaterialCommunityIcons name={item.icon} size={20} color={on ? c.onAccent : c.accent} />
+                <Text style={[styles.tabText, on && styles.onAccent]} numberOfLines={1}>
+                  {t(item.label)}
                 </Text>
               </Pressable>
             );
@@ -149,10 +142,98 @@ export function MenuPanel() {
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
           {tab === 'play' ? (
             <>
-              <Text style={styles.playing}>{t('playing_as', { name: activeName })}</Text>
+              <View style={styles.startRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!allowed(difficulty)}
+                  onPress={() => act(() => newGame(difficulty))}
+                  style={[styles.startButton, styles.startPrimary, !allowed(difficulty) && styles.dimmed]}
+                >
+                  <MaterialCommunityIcons name="play" size={22} color={c.onAccent} />
+                  <Text style={styles.startPrimaryText}>{t('new_game')}</Text>
+                  <Text style={[styles.startSub, styles.onAccent]}>{t(difficulty)}</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => act(() => startDaily())} style={styles.startButton}>
+                  <MaterialCommunityIcons name="calendar-star" size={22} color={c.accent} />
+                  <Text style={styles.startText}>{t('daily')}</Text>
+                  <Text style={styles.startSub}>{t('daily_challenge')}</Text>
+                </Pressable>
+              </View>
 
+              <Section title={t('level')} styles={styles}>
+                <View style={styles.grid} accessibilityRole="radiogroup">
+                  {LEVELS.map((level) => {
+                    const active = level === difficulty;
+                    const locked = !open_.includes(level) || !allowed(level);
+                    return (
+                      <Pressable
+                        key={level}
+                        accessibilityRole="radio"
+                        accessibilityLabel={locked ? `${t(level)}, locked` : t(level)}
+                        aria-checked={active}
+                        aria-disabled={locked}
+                        disabled={locked}
+                        onPress={() => act(() => newGame(level))}
+                        style={[styles.gridCell, active && styles.cardOn, locked && styles.dimmed]}
+                      >
+                        {locked ? <MaterialCommunityIcons name="lock-outline" size={14} color={active ? c.onAccent : c.muted} /> : null}
+                        <Text style={[styles.gridText, active && styles.onAccent]}>{t(level)}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {casual ? (
+                  <Text style={styles.note}>{t('casual_note', { level: t(CASUAL_MAX_LEVEL), n: casualWins, max: CASUAL_DAILY_WINS })}</Text>
+                ) : null}
+              </Section>
+
+              <Section title={t('time_limit')} styles={styles}>
+                {kidSafe ? <Text style={styles.note}>{t('clock_off_kid_safe')}</Text> : null}
+                <View style={styles.segments} accessibilityRole="radiogroup">
+                  {TIME_LIMITS.map((limit) => {
+                    const active = limit.value === timeLimitMs;
+                    return (
+                      <Pressable
+                        key={limit.label}
+                        accessibilityRole="radio"
+                        aria-checked={active}
+                        disabled={kidSafe || !allowed(difficulty)}
+                        onPress={() => act(() => setTimeLimit(limit.value))}
+                        style={[styles.segment, active && styles.cardOn, (kidSafe || !allowed(difficulty)) && styles.dimmed]}
+                      >
+                        <Text style={[styles.gridText, active && styles.onAccent]}>{limit.key ? t(limit.key) : limit.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Section>
+
+              {notes ? (
+                <Section title={t('section_tools')} styles={styles}>
+                  <Pressable accessibilityRole="button" onPress={() => act(() => fillNotes())} style={styles.row}>
+                    <MaterialCommunityIcons name="pencil-outline" size={22} color={c.accent} />
+                    <Text style={styles.rowLabel}>{t('fill_notes')}</Text>
+                  </Pressable>
+                </Section>
+              ) : null}
+            </>
+          ) : null}
+
+          {tab === 'challenges' ? (
+            <>
+              <Text style={styles.note}>{t('challenges_intro')}</Text>
+              {TIERS.map((tier) => (
+                <Section key={tier.key} title={t(tier.key)} styles={styles}>
+                  {CHALLENGES.filter((ch) => tier.levels.includes(ch.level)).map(renderChallenge)}
+                </Section>
+              ))}
+            </>
+          ) : null}
+
+          {tab === 'more' ? (
+            <>
               <Section title={t('choose_player')} styles={styles}>
-                <View style={styles.row} accessibilityRole="radiogroup">
+                <View style={styles.segments} accessibilityRole="radiogroup">
                   {profiles.map((p) => {
                     const on = p.id === activeId;
                     return (
@@ -165,131 +246,48 @@ export function MenuPanel() {
                           hide();
                           void switchTo(p.id);
                         }}
-                        style={[styles.chip, on && styles.chipOn]}
+                        style={[styles.segment, on && styles.cardOn]}
                       >
-                        <Text style={[styles.chipText, on && styles.chipTextOn]}>{on ? `✓ ${p.name}` : p.name}</Text>
+                        <Text style={[styles.gridText, on && styles.onAccent]}>{p.name}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
               </Section>
 
-              <Section title={t('level')} styles={styles}>
-                <View style={styles.row} accessibilityRole="radiogroup">
-                  {DIFFICULTIES.map((d) => {
-                    const active = d.value === difficulty;
-                    const locked = !open_.includes(d.value) || !allowed(d.value);
-                    return (
-                      <Pressable
-                        key={d.value}
-                        accessibilityRole="radio"
-                        accessibilityLabel={locked ? `${t(d.label)}, locked` : t(d.label)}
-                        aria-checked={active}
-                        aria-disabled={locked}
-                        disabled={locked}
-                        onPress={() => act(() => newGame(d.value))}
-                        style={[styles.chip, active && styles.chipOn, locked && styles.locked]}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextOn]}>{locked ? `🔒 ${t(d.label)}` : t(d.label)}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {casual ? (
-                  <Text style={styles.note}>{t('casual_note', { level: t(CASUAL_MAX_LEVEL), n: casualWins, max: CASUAL_DAILY_WINS })}</Text>
+              <Section title={t('section_progress')} styles={styles}>
+                <Row icon="chart-bar" label={t('stats')} onPress={() => go('/stats')} styles={styles} />
+                <Row icon="cog-outline" label={t('settings')} hint={t('settings_row_hint')} onPress={() => go('/settings', true)} styles={styles} />
+              </Section>
+
+              <Section title={t('help')} styles={styles}>
+                <Row icon="play-circle-outline" label={t('app_tour')} onPress={() => act(() => useTour.getState().show(0))} styles={styles} />
+                <Row icon="book-open-variant" label={t('how_to_play')} onPress={() => go('/howto')} styles={styles} />
+                <Row icon="information-outline" label={t('about')} onPress={() => go('/about')} styles={styles} />
+                <Row icon="shield-lock-outline" label={t('privacy')} onPress={() => go('/privacy')} styles={styles} />
+                <Row icon="file-document-outline" label={t('terms')} onPress={() => go('/terms')} styles={styles} />
+                {Platform.OS === 'web' ? (
+                  install.installed ? (
+                    <Text style={styles.note}>{t('install_installed')}</Text>
+                  ) : install.canInstall ? (
+                    <Pressable accessibilityRole="button" onPress={() => act(() => void install.promptInstall())} style={styles.installButton}>
+                      <MaterialCommunityIcons name="download-outline" size={20} color={c.onAccent} />
+                      <Text style={styles.installText}>{t('install_sudoku')}</Text>
+                    </Pressable>
+                  ) : install.ios ? (
+                    <Text style={styles.note}>{t('install_ios')}</Text>
+                  ) : (
+                    <Text style={styles.note}>{t('install_other')}</Text>
+                  )
                 ) : null}
               </Section>
-
-              <Section title={t('time_limit')} styles={styles}>
-                <View style={[styles.row, kidSafe && styles.dimmed]} accessibilityRole="radiogroup">
-                  {TIME_LIMITS.map((limit) => {
-                    const active = limit.value === timeLimitMs;
-                    return (
-                      <Pressable
-                        key={limit.label}
-                        accessibilityRole="radio"
-                        aria-checked={active}
-                        disabled={kidSafe || !allowed(difficulty)}
-                        onPress={() => act(() => setTimeLimit(limit.value))}
-                        style={[styles.chip, active && styles.chipOn]}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextOn]}>{limit.key ? t(limit.key) : limit.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </Section>
-
-              <Section title={t('game')} styles={styles}>
-                <View style={styles.row}>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={!allowed(difficulty)}
-                    onPress={() => act(() => newGame(difficulty))}
-                    style={[styles.action, styles.primary, !allowed(difficulty) && styles.locked]}
-                  >
-                    <Text style={styles.primaryText}>{t('new_game')}</Text>
-                  </Pressable>
-                  <Pressable accessibilityRole="button" onPress={() => act(() => startDaily())} style={styles.action}>
-                    <Text style={styles.actionText}>{t('daily')}</Text>
-                  </Pressable>
-                  {notes ? (
-                    <Pressable accessibilityRole="button" onPress={() => act(() => fillNotes())} style={styles.action}>
-                      <Text style={styles.actionText}>{t('fill_notes')}</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              </Section>
             </>
           ) : null}
-
-          {tab === 'challenges' ? (
-            <>
-              <Text style={styles.note}>{t('challenges_intro')}</Text>
-              {TIERS.map((tier) => (
-                <Section key={tier.key} title={t(tier.key)} styles={styles}>
-                  <View style={styles.list} accessibilityRole="radiogroup">
-                    {CHALLENGES.filter((ch) => tier.levels.includes(ch.level)).map(renderChallenge)}
-                  </View>
-                </Section>
-              ))}
-            </>
-          ) : null}
-
-          {tab === 'more' ? (
-            <>
-              <Row icon="chart-bar" label={t('stats')} onPress={() => go('/stats')} styles={styles} />
-              <Row icon="cog-outline" label={t('settings')} hint={t('settings_row_hint')} onPress={() => go('/settings', true)} styles={styles} />
-              <Row icon="information-outline" label={t('about')} onPress={() => go('/about')} styles={styles} />
-            </>
-          ) : null}
-
-          {tab === 'help' ? (
-            <>
-              <Row icon="play-circle-outline" label={t('app_tour')} onPress={() => act(() => useTour.getState().show(0))} styles={styles} />
-              <Row icon="book-open-variant" label={t('how_to_play')} onPress={() => go('/howto')} styles={styles} />
-              <Row icon="shield-lock-outline" label={t('privacy')} onPress={() => go('/privacy')} styles={styles} />
-              <Row icon="file-document-outline" label={t('terms')} onPress={() => go('/terms')} styles={styles} />
-              {Platform.OS === 'web' ? (
-                install.installed ? (
-                  <Text style={styles.note}>{t('install_installed')}</Text>
-                ) : install.canInstall ? (
-                  <Pressable accessibilityRole="button" onPress={() => act(() => void install.promptInstall())} style={styles.installButton}>
-                    <Text style={styles.primaryText}>{t('install_sudoku')}</Text>
-                  </Pressable>
-                ) : install.ios ? (
-                  <Text style={styles.note}>{t('install_ios')}</Text>
-                ) : (
-                  <Text style={styles.note}>{t('install_other')}</Text>
-                )
-              ) : null}
-            </>
-          ) : null}
-
-          <Pressable accessibilityRole="button" onPress={hide} style={styles.close}>
-            <Text style={styles.closeText}>{t('close')}</Text>
-          </Pressable>
         </ScrollView>
+
+        <Pressable accessibilityRole="button" onPress={hide} style={styles.close}>
+          <Text style={styles.closeText}>{t('close')}</Text>
+        </Pressable>
       </View>
     </Modal>
   );
@@ -304,28 +302,27 @@ function Section({ title, children, styles }: { title: string; children: React.R
   );
 }
 
-// A full-width row with an icon, for the More and Help tabs.
-function Row({
-  icon,
-  label,
-  hint,
-  onPress,
-  styles,
-}: {
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  label: string;
-  hint?: string;
-  onPress: () => void;
-  styles: ReturnType<typeof makeStyles>;
-}) {
+// One labelled fact on a challenge card, with an icon so the numbers are never mixed up.
+function Fact({ icon, text, on, styles, c }: { icon: Icon; text: string; on: boolean; styles: ReturnType<typeof makeStyles>; c: Palette }) {
+  const color = on ? c.onAccent : c.muted;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.rowItem}>
-      <MaterialCommunityIcons name={icon} size={24} color={styles.rowIcon.color} />
+    <View style={styles.fact}>
+      <MaterialCommunityIcons name={icon} size={14} color={color} />
+      <Text style={[styles.factText, { color }]}>{text}</Text>
+    </View>
+  );
+}
+
+// A full-width row that opens a screen.
+function Row({ icon, label, hint, onPress, styles }: { icon: Icon; label: string; hint?: string; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.row}>
+      <MaterialCommunityIcons name={icon} size={22} color={styles.accentIcon.color} />
       <View style={styles.rowText}>
         <Text style={styles.rowLabel}>{label}</Text>
         {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={22} color={styles.rowIcon.color} />
+      <MaterialCommunityIcons name="chevron-right" size={20} color={styles.muted.color} />
     </Pressable>
   );
 }
@@ -344,39 +341,49 @@ function makeStyles(c: Palette) {
       backgroundColor: c.surface,
     },
     handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: c.line, marginTop: 8 },
+    tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 4, height: 44, borderRadius: c.radius, borderWidth: 2, borderColor: c.accent, backgroundColor: c.background },
+    tabOn: { backgroundColor: c.accent },
+    tabText: { fontSize: 14, fontWeight: '700', color: c.accent },
     scroll: { flex: 1 },
-    content: { padding: 20, gap: 18, paddingBottom: 32 },
-    playing: { fontSize: 16, fontWeight: '800', color: c.accent },
-    section: { gap: 8 },
-    sectionTitle: { fontSize: 13, fontWeight: '700', color: c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
-    row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    dimmed: { opacity: 0.45 },
-    chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: c.radius, borderWidth: 2, borderColor: c.line, backgroundColor: c.background },
-    chipOn: { backgroundColor: c.accent, borderColor: c.accent },
-    chipText: { fontSize: 15, fontWeight: '700', color: c.text },
-    chipTextOn: { color: c.onAccent },
-    locked: { opacity: 0.5 },
-    action: { flexGrow: 1, minWidth: 96, alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, borderWidth: 2, borderColor: c.accent },
-    primary: { backgroundColor: c.accent },
-    actionText: { fontSize: 15, fontWeight: '700', color: c.accent },
-    primaryText: { fontSize: 15, fontWeight: '700', color: c.onAccent },
+    content: { padding: 16, gap: 20, paddingBottom: 24 },
+    section: { gap: 10 },
+    sectionTitle: { fontSize: 12, fontWeight: '700', color: c.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
     note: { fontSize: 14, lineHeight: 20, color: c.muted },
-    list: { gap: 8 },
-    challenge: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: c.radius, borderWidth: 2, borderColor: c.line, backgroundColor: c.background, gap: 2 },
-    challengeDetail: { fontSize: 13, color: c.muted },
-    installButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, backgroundColor: c.accent },
-    close: { alignItems: 'center', paddingVertical: 12 },
-    closeText: { fontSize: 16, fontWeight: '700', color: c.muted },
-    tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
-    tab: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 8, borderRadius: c.radius, borderWidth: 1, borderColor: c.line },
-    tabOn: { borderColor: c.accent, backgroundColor: c.background },
-    tabText: { fontSize: 12, fontWeight: '700', color: c.muted },
-    tabTextOn: { color: c.accent },
-    challengeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    rowItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14, borderRadius: c.radius, borderWidth: 1, borderColor: c.line, backgroundColor: c.background },
-    rowIcon: { color: c.accent },
+    dimmed: { opacity: 0.45 },
+    onAccent: { color: c.onAccent },
+    accentIcon: { color: c.accent },
+    muted: { color: c.muted },
+
+    startRow: { flexDirection: 'row', gap: 10 },
+    startButton: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 14, borderRadius: c.radius + 4, borderWidth: 2, borderColor: c.accent, backgroundColor: c.background },
+    startPrimary: { backgroundColor: c.accent },
+    startPrimaryText: { fontSize: 16, fontWeight: '800', color: c.onAccent },
+    startText: { fontSize: 16, fontWeight: '800', color: c.accent },
+    startSub: { fontSize: 12, color: c.muted },
+
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    gridCell: { minWidth: '30%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, height: 44, borderRadius: c.radius, borderWidth: 2, borderColor: c.line, backgroundColor: c.background },
+    gridText: { fontSize: 15, fontWeight: '700', color: c.text },
+    segments: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    segment: { flexGrow: 1, minWidth: 72, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: c.radius, borderWidth: 2, borderColor: c.line, backgroundColor: c.background },
+    cardOn: { backgroundColor: c.accent, borderColor: c.accent },
+
+    card: { gap: 10, padding: 14, borderRadius: c.radius + 2, borderWidth: 2, borderColor: c.line, backgroundColor: c.background },
+    cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: c.text },
+    facts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    fact: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    factText: { fontSize: 13, fontWeight: '600' },
+
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14, borderRadius: c.radius, borderWidth: 1, borderColor: c.line, backgroundColor: c.background },
     rowText: { flex: 1, gap: 2 },
-    rowLabel: { fontSize: 16, fontWeight: '700', color: c.text },
+    rowLabel: { flex: 1, fontSize: 16, fontWeight: '700', color: c.text },
     rowHint: { fontSize: 13, color: c.muted },
+
+    installButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: c.radius, backgroundColor: c.accent },
+    installText: { fontSize: 16, fontWeight: '700', color: c.onAccent },
+    close: { alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, borderTopColor: c.line },
+    closeText: { fontSize: 16, fontWeight: '700', color: c.muted },
   });
 }

@@ -7,28 +7,29 @@ import { usePrefs } from '../prefs';
 import { ANIMALS } from '../components/AnimalFriends';
 import { useProfiles } from '../profiles';
 import { LANGUAGES, useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { useInstall } from '../install';
 import { THEME_NAMES, THEMES, useColors } from '../theme';
 import type { Palette, ThemeName } from '../theme';
 
-const THEME_LABELS: Record<ThemeName, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  oled: 'True black',
-  sepia: 'Sepia',
-  candy: 'Candy',
-  jungle: 'Jungle',
-  space: 'Space',
+const THEME_KEYS: Record<ThemeName, StringKey> = {
+  light: 'theme_light',
+  dark: 'theme_dark',
+  oled: 'theme_oled',
+  sepia: 'theme_sepia',
+  candy: 'theme_candy',
+  jungle: 'theme_jungle',
+  space: 'theme_space',
 };
 
 const HINT_LIMITS: { value: number | null; label: string }[] = [
   { value: 3, label: '3' },
   { value: 5, label: '5' },
-  { value: null, label: 'Unlimited' },
+  { value: null, label: 'unlimited' },
 ];
 
 const MISTAKE_LIMITS: { value: number | null; label: string }[] = [
-  { value: null, label: 'Casual' },
+  { value: null, label: 'casual' },
   { value: 3, label: '3' },
   { value: 5, label: '5' },
 ];
@@ -78,11 +79,11 @@ export default function SettingsScreen() {
           <Text style={styles.title}>{t('title_settings')}</Text>
         </View>
 
-        <Text style={styles.intro}>Each section below explains what it changes. Nothing here can be lost, and you can change any choice at any time.</Text>
+        <Text style={styles.intro}>{t('settings_intro')}</Text>
 
         <Group
           title={t('group_appearance')}
-          footer="Choose how the game looks and which language it speaks. Candy, Jungle and Space are bright and playful. True black is dark and can save battery on some phones."
+          footer={t('foot_appearance')}
         >
           <View style={styles.rowPlain}>
             <Text style={[styles.label, styles.labelGrow]}>{t('row_language')}</Text>
@@ -96,7 +97,7 @@ export default function SettingsScreen() {
                 key={name}
                 styles={styles}
                 last={i === THEME_NAMES.length - 1}
-                label={THEME_LABELS[name]}
+                label={t(THEME_KEYS[name])}
                 role="radio"
                 checked={active}
                 onPress={() => update('theme', name)}
@@ -115,17 +116,17 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_gameplay')}
-          footer="Casual: a wrong number never ends the game. 3 or 5: a game ends when that many wrong numbers are entered. Hints and Notes help while you play. Level up unlocks harder puzzles as you win."
+          footer={t('foot_gameplay')}
         >
           <View style={[styles.rowPlain, kidSafe && styles.disabled]} pointerEvents={kidSafe ? 'none' : 'auto'}>
             <Text style={[styles.label, styles.labelGrow]}>{t('row_mistake_limit')}</Text>
-            <Segmented styles={styles} c={c} options={MISTAKE_LIMITS} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
+            <Segmented styles={styles} c={c} options={MISTAKE_LIMITS.map((o) => ({ ...o, label: o.value === null ? t('casual') : o.label }))} value={mistakeLimit} onChange={(v) => update('mistakeLimit', v)} />
           </View>
           <ToggleRow styles={styles} c={c} label={t('row_notes')} value={notes} onChange={(v) => update('notes', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_hints')} value={hints} onChange={(v) => update('hints', v)} />
           <View style={styles.rowPlain}>
             <Text style={[styles.label, styles.labelGrow]}>{t('row_hints_per_game')}</Text>
-            <Segmented styles={styles} c={c} options={HINT_LIMITS} value={hintLimit} onChange={(v) => update('hintLimit', v)} />
+            <Segmented styles={styles} c={c} options={HINT_LIMITS.map((o) => ({ ...o, label: o.value === null ? t('unlimited') : o.label }))} value={hintLimit} onChange={(v) => update('hintLimit', v)} />
           </View>
           <ToggleRow styles={styles} c={c} label={t('row_stars_badges')} value={badges} onChange={(v) => update('badges', v)} />
           <ToggleRow
@@ -148,20 +149,13 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_kids')}
-          footer={[
-            kidSafe
-              ? 'Kid-safe mode is on: mistakes never end a game, timed games are off, and the mistake limit is locked.'
-              : 'Kid-safe mode keeps games gentle. Animal friends walk across the game screen while you play.',
-            parentLock
-              ? 'Parent lock is on: opening Settings or the parent summary asks a sum. A grown-up picks the right answer to continue.'
-              : 'Parent lock asks a grown-up a sum before Settings or the parent summary opens.',
-          ].join(' ')}
+          footer={[kidSafe ? t('foot_kids_on') : t('foot_kids_off'), parentLock ? t('foot_parent_on') : t('foot_parent_off')].join(' ')}
         >
           <ToggleRow styles={styles} c={c} label={t('row_kid_safe')} value={kidSafe} onChange={(v) => update('kidSafe', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_rewards')} value={rewards} onChange={(v) => update('rewards', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_parent_lock')} value={parentLock} onChange={(v) => update('parentLock', v)} />
           <View style={styles.animalRow}>
-            <Text style={styles.label}>Animal friends</Text>
+            <Text style={styles.label}>{t('row_animals')}</Text>
             <View style={styles.animalChips} accessibilityRole="radiogroup">
               {ANIMALS.map((a) => {
                 const on = animals.includes(a.id);
@@ -183,20 +177,20 @@ export default function SettingsScreen() {
           </View>
         </Group>
 
-        <Group title={t('group_comfort')} footer="Large digits makes the numbers bigger. Colour-blind friendly adds a ! to wrong numbers and a diamond to matching numbers, so colour is not needed to see them.">
+        <Group title={t('group_comfort')} footer={t('foot_comfort')}>
           <ToggleRow styles={styles} c={c} label={t('row_large_digits')} value={largeDigits} onChange={(v) => update('largeDigits', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_colour_blind')} value={colorBlind} last onChange={(v) => update('colorBlind', v)} />
         </Group>
 
         <Group
           title={t('group_feedback')}
-          footer={Platform.OS === 'web' ? 'Sound plays a short tone when you tap, make a mistake or finish. Vibration is a gentle buzz on phones and tablets only. Turn either off for a quiet game.' : 'Sound plays a short tone when you tap, make a mistake or finish. Vibration is a gentle buzz. Turn either off for a quiet game.'}
+          footer={Platform.OS === 'web' ? t('foot_feedback_web') : t('foot_feedback')}
         >
           <ToggleRow styles={styles} c={c} label={t('row_sound')} value={sound} onChange={(v) => update('sound', v)} />
           <ToggleRow styles={styles} c={c} label={t('row_haptics')} value={haptics} last onChange={(v) => update('haptics', v)} />
         </Group>
 
-        <Group title={t('group_players')} footer="Each player keeps their own games, stats and settings on this device. Tap a name to play as that player. You can rename or delete the player who is playing.">
+        <Group title={t('group_players')} footer={t('foot_players')}>
           <View style={styles.playerList} accessibilityRole="radiogroup">
             {profiles.map((p, i) => {
               const on = p.id === activeProfile;
@@ -242,16 +236,16 @@ export default function SettingsScreen() {
 
         <Group
           title={t('group_about')}
-          footer={Platform.OS === 'web' && !installed && ios ? 'On iPhone or iPad, tap Share, then Add to Home Screen. The About page also has the privacy policy and terms.' : 'The About page also has the privacy policy and terms.'}
+          footer={Platform.OS === 'web' && !installed && ios ? t('foot_about_ios') : t('foot_about')}
         >
           {Platform.OS === 'web' ? (
             <Row
               styles={styles}
-              label={installed ? 'App installed' : 'Install app'}
+              label={installed ? t('row_installed') : t('row_install')}
               onPress={installed || (!canInstall && ios) ? undefined : canInstall ? () => void promptInstall() : undefined}
               role={canInstall ? 'button' : undefined}
               trailing={
-                installed ? <Text style={styles.check}>✓</Text> : canInstall ? <Text style={styles.linkText}>Install</Text> : <Text style={styles.value}>{ios ? 'Share menu' : 'Browser menu'}</Text>
+                installed ? <Text style={styles.check}>✓</Text> : canInstall ? <Text style={styles.linkText}>{t('value_install')}</Text> : <Text style={styles.value}>{ios ? t('value_share_menu') : t('value_browser_menu')}</Text>
               }
             />
           ) : null}

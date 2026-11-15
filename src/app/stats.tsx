@@ -3,8 +3,10 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CountUp } from '../components/CountUp';
-import { usePrefs } from '../prefs';
 import { askGrownUp } from '../gate';
+import { badgeKey, useT } from '../i18n';
+import type { StringKey } from '../i18n';
+import { usePrefs } from '../prefs';
 import type { Difficulty } from '../sudoku/engine';
 import { badges as computeBadges } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
@@ -14,16 +16,17 @@ import type { GameRecord, Stats } from '../sudoku/stats';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-const LABELS: Record<Difficulty, string> = {
-  easy: 'Easy',
-  medium: 'Medium',
-  hard: 'Hard',
-  expert: 'Expert',
-  evil: 'Evil',
+const LEVEL_KEYS: Record<Difficulty, StringKey> = {
+  easy: 'easy',
+  medium: 'medium',
+  hard: 'hard',
+  expert: 'expert',
+  evil: 'evil',
 };
 
 export default function StatsScreen() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const games = useProgress((s) => s.games);
   const badgesOn = usePrefs((s) => s.badges);
@@ -42,9 +45,9 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('back')}</Text>
           </Pressable>
-          <Text style={styles.title}>Statistics</Text>
+          <Text style={styles.title}>{t('statistics')}</Text>
         </View>
 
         {!stats ? (
@@ -52,22 +55,29 @@ export default function StatsScreen() {
         ) : (
           <>
             <View style={styles.summary}>
-              <Summary label="Played" value={stats.played} styles={styles} />
-              <Summary label="Won" value={stats.won} styles={styles} />
-              <Summary label="Win rate" value={stats.winRate === null ? null : stats.winRate * 100} suffix="%" styles={styles} />
-              <Summary label="Streak (days)" value={stats.streak} styles={styles} />
-              <Summary label="Daily challenges won" value={stats.dailyWins} styles={styles} />
-              <Summary label="Daily streak" value={stats.dailyStreak} styles={styles} />
+              <Summary label={t('played')} value={stats.played} styles={styles} />
+              <Summary label={t('won')} value={stats.won} styles={styles} />
+              <Summary label={t('win_rate')} value={stats.winRate === null ? null : stats.winRate * 100} suffix="%" styles={styles} />
+              <Summary label={t('streak_days')} value={stats.streak} styles={styles} />
+              <Summary label={t('daily_wins')} value={stats.dailyWins} styles={styles} />
+              <Summary label={t('daily_streak')} value={stats.dailyStreak} styles={styles} />
             </View>
 
             {badgesOn ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Badges</Text>
+                <Text style={styles.sectionTitle}>{t('badges')}</Text>
                 <View style={styles.badges}>
                   {badges.map((b) => (
-                    <View key={b.id} style={[styles.badge, b.unlocked && styles.badgeOn]} accessibilityLabel={`${b.title}: ${b.unlocked ? 'earned' : 'locked'}`}>
-                      <Text style={[styles.badgeTitle, b.unlocked && styles.badgeTitleOn]}>{b.unlocked ? '★ ' : '🔒 '}{b.title}</Text>
-                      <Text style={[styles.badgeText, b.unlocked && styles.badgeTitleOn]}>{b.description}</Text>
+                    <View
+                      key={b.id}
+                      style={[styles.badge, b.unlocked && styles.badgeOn]}
+                      accessibilityLabel={`${t(`badge_${badgeKey(b.id)}` as StringKey)}: ${b.unlocked ? t('badge_earned') : t('badge_locked')}`}
+                    >
+                      <Text style={[styles.badgeTitle, b.unlocked && styles.badgeTitleOn]}>
+                        {b.unlocked ? '★ ' : '🔒 '}
+                        {t(`badge_${badgeKey(b.id)}` as StringKey)}
+                      </Text>
+                      <Text style={[styles.badgeText, b.unlocked && styles.badgeTitleOn]}>{t(`badge_${badgeKey(b.id)}_desc` as StringKey)}</Text>
                     </View>
                   ))}
                 </View>
@@ -75,9 +85,9 @@ export default function StatsScreen() {
             ) : null}
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent games</Text>
+              <Text style={styles.sectionTitle}>{t('recent_games')}</Text>
               {recent.length === 0 ? (
-                <Text style={styles.empty}>No games yet. Finish one and it will appear here.</Text>
+                <Text style={styles.empty}>{t('no_games')}</Text>
               ) : (
                 <View style={styles.table}>
                   {recent.map((g, i) => (
@@ -88,19 +98,19 @@ export default function StatsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>By level</Text>
+              <Text style={styles.sectionTitle}>{t('by_level')}</Text>
               <View style={styles.table}>
                 <View style={[styles.row, styles.head]}>
-                  <Text style={[styles.cell, styles.headText]}>Level</Text>
-                  <Text style={[styles.cell, styles.headText]}>Played</Text>
-                  <Text style={[styles.cell, styles.headText]}>Won</Text>
-                  <Text style={[styles.cell, styles.headText]}>Best</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('level')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('played')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('won')}</Text>
+                  <Text style={[styles.cell, styles.headText]}>{t('best')}</Text>
                 </View>
-                {(Object.keys(LABELS) as Difficulty[]).map((d) => {
+                {(Object.keys(LEVEL_KEYS) as Difficulty[]).map((d) => {
                   const row = stats.byDifficulty[d];
                   return (
                     <View key={d} style={styles.row}>
-                      <Text style={styles.cell}>{LABELS[d]}</Text>
+                      <Text style={styles.cell}>{t(LEVEL_KEYS[d])}</Text>
                       <Text style={styles.cell}>{row.played}</Text>
                       <Text style={styles.cell}>{row.won}</Text>
                       <Text style={styles.cell}>{row.bestMs === null ? '—' : formatDuration(row.bestMs)}</Text>
@@ -111,7 +121,7 @@ export default function StatsScreen() {
             </View>
 
             <Pressable accessibilityRole="button" onPress={() => askGrownUp(() => router.push('/summary'))} style={styles.link}>
-              <Text style={styles.linkText}>Parent summary, last 7 days</Text>
+              <Text style={styles.linkText}>{t('parent_summary_link')}</Text>
             </Pressable>
           </>
         )}
@@ -122,23 +132,28 @@ export default function StatsScreen() {
 
 // One finished game. Stars show for wins. Replay starts the same puzzle again when it was saved.
 function GameRow({ game, first, styles }: { game: GameRecord; first: boolean; styles: ReturnType<typeof makeStyles> }) {
+  const t = useT();
   const replay = () => {
     if (!game.puzzle) return;
     useGameStore.getState().replay(game.puzzle, game.difficulty);
     router.replace('/');
   };
   const stars = game.won && game.stars ? '★'.repeat(game.stars) + '☆'.repeat(3 - game.stars) : '—';
+  const level = t(LEVEL_KEYS[game.difficulty]);
   return (
     <View style={[styles.gameRow, !first && styles.divider]}>
       <View style={styles.gameText}>
-        <Text style={styles.gameTitle}>{LABELS[game.difficulty]}{game.daily ? ' · Daily' : ''}</Text>
+        <Text style={styles.gameTitle}>
+          {level}
+          {game.daily ? ` · ${t('daily')}` : ''}
+        </Text>
         <Text style={styles.gameMeta}>
-          {game.won ? 'Won' : 'Not won'} · {formatDuration(game.elapsedMs)} · {stars}
+          {game.won ? t('won') : t('not_won')} · {formatDuration(game.elapsedMs)} · {stars}
         </Text>
       </View>
       {game.puzzle ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Replay ${LABELS[game.difficulty]} puzzle`} onPress={replay} style={styles.replay}>
-          <Text style={styles.replayText}>Replay</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('replay_label', { level })} onPress={replay} style={styles.replay}>
+          <Text style={styles.replayText}>{t('replay')}</Text>
         </Pressable>
       ) : null}
     </View>

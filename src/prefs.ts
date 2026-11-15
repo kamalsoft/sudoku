@@ -28,7 +28,7 @@ interface Prefs {
   // Settings ask a grown-up sum before opening.
   parentLock: boolean;
   // Interface language.
-  language: 'en' | 'es';
+  language: 'en' | 'es' | 'fr';
   // Animal friends that walk across the game screen, by id from AnimalFriends.
   animals: string[];
 }

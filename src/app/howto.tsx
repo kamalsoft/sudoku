@@ -1,38 +1,36 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
 import { Bullet, Heading, Page, Para } from '../components/Page';
+import { useT } from '../i18n';
 import { useTour } from '../tour';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 export default function HowToScreen() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const replay = () => {
     useTour.getState().show(0);
     router.replace('/');
   };
   return (
-    <Page title="How to play">
-      <Heading>The goal</Heading>
-      <Para>Fill every row, column and 3×3 block with the digits 1 to 9. Each digit appears only once in each.</Para>
-
-      <Heading>Playing</Heading>
-      <Bullet>Tap an empty square, then a number. Wrong numbers flash red and shake.</Bullet>
-      <Bullet>Turn on Notes in Settings to write small candidate numbers with Pencil.</Bullet>
-      <Bullet>Erase removes your number. A cell with no number loses its notes instead.</Bullet>
-      <Bullet>Hint fills the selected square with the right number. It is not a mistake, but it lowers the stars.</Bullet>
-
-      <Heading>Stars and levels</Heading>
-      <Bullet>Each win earns one to three stars. Mistakes and hints take stars away.</Bullet>
-      <Bullet>With Level up on, harder levels unlock after three wins on the level before.</Bullet>
-
-      <Heading>The menu</Heading>
-      <Para>Tap ☰ for levels, time limits, a new or daily puzzle, stats, settings, help and install.</Para>
-
+    <Page title={t('howto_title')}>
+      <Heading>{t('howto_h1')}</Heading>
+      <Para>{t('howto_p1')}</Para>
+      <Heading>{t('howto_h2')}</Heading>
+      <Bullet>{t('howto_b1')}</Bullet>
+      <Bullet>{t('howto_b2')}</Bullet>
+      <Bullet>{t('howto_b3')}</Bullet>
+      <Bullet>{t('howto_b4')}</Bullet>
+      <Heading>{t('howto_h3')}</Heading>
+      <Bullet>{t('howto_b5')}</Bullet>
+      <Bullet>{t('howto_b6')}</Bullet>
+      <Heading>{t('howto_h4')}</Heading>
+      <Para>{t('howto_p2')}</Para>
       <Pressable accessibilityRole="button" onPress={replay} style={styles.button}>
-        <Text style={styles.buttonText}>Show the tour again</Text>
+        <Text style={styles.buttonText}>{t('tour_again')}</Text>
       </Pressable>
     </Page>
   );

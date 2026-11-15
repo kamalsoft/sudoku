@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useT } from '../i18n';
 import { useProgress } from '../sudoku/progressStore';
 import { weekSummary } from '../sudoku/progress';
 import { dayKey, formatDuration } from '../sudoku/stats';
@@ -11,6 +12,7 @@ import type { Palette } from '../theme';
 // For grown-ups: the last seven days at a glance.
 export default function SummaryScreen() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const games = useProgress((s) => s.games);
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function SummaryScreen() {
 
   const week = useMemo(() => weekSummary(games, dayKey(new Date())), [games]);
   const totals = week.reduce(
-    (t, d) => ({ played: t.played + d.played, won: t.won + d.won, ms: t.ms + d.ms }),
+    (acc, d) => ({ played: acc.played + d.played, won: acc.won + d.won, ms: acc.ms + d.ms }),
     { played: 0, won: 0, ms: 0 },
   );
   const busiest = Math.max(1, ...week.map((d) => d.played));
@@ -29,18 +31,18 @@ export default function SummaryScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('back')}</Text>
           </Pressable>
-          <Text style={styles.title}>Last 7 days</Text>
+          <Text style={styles.title}>{t('last_7_days')}</Text>
         </View>
 
         <View style={styles.totals}>
-          <Text style={styles.total}>{totals.played} played</Text>
-          <Text style={styles.total}>{totals.won} won</Text>
-          <Text style={styles.total}>{formatDuration(totals.ms)} playing</Text>
+          <Text style={styles.total}>{t('total_played', { n: totals.played })}</Text>
+          <Text style={styles.total}>{t('total_won', { n: totals.won })}</Text>
+          <Text style={styles.total}>{t('total_time', { time: formatDuration(totals.ms) })}</Text>
         </View>
 
-        <View style={styles.chart} accessibilityLabel="Games played per day">
+        <View style={styles.chart} accessibilityLabel={t('bars_label')}>
           {week.map((d) => (
             <View key={d.day} style={styles.column}>
               <Text style={styles.count}>{d.played}</Text>
@@ -49,7 +51,7 @@ export default function SummaryScreen() {
             </View>
           ))}
         </View>
-        <Text style={styles.note}>Bars show games played each day. Time and wins are in the totals above.</Text>
+        <Text style={styles.note}>{t('bars_note')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

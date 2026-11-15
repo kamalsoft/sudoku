@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ActivityIndicator, Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '../components/CelebrationOverlay';
@@ -8,13 +8,11 @@ import { MenuPanel } from '../components/MenuPanel';
 import { NumberPad, PAD_KEY_HEIGHT } from '../components/NumberPad';
 import { TopBar } from '../components/TopBar';
 import { Tour } from '../components/Tour';
-import { maybeShowFirstRunTour } from '../tour';
 import { SudokuGrid } from '../components/SudokuGrid';
 import { useGameLifecycle } from '../hooks/useGameLifecycle';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { useEntrance } from '../motion';
 import { usePrefs } from '../prefs';
-import { bootApp } from '../profiles';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
@@ -28,9 +26,7 @@ export default function GameRoute() {
   const ready = useGameStore((s) => s.ready);
   const prefsReady = usePrefs((s) => s.ready);
 
-  useEffect(() => {
-    void bootApp().then(maybeShowFirstRunTour);
-  }, []);
+
 
   if (!ready || !prefsReady) {
     return (

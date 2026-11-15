@@ -40,7 +40,7 @@ export function NumberPad({ width }: Props) {
       <Pressable
         key={m}
         accessibilityRole="button"
-        accessibilityLabel={`${label} mode`}
+        accessibilityLabel={label}
         aria-pressed={active}
         onPress={() => setMode(active ? 'enter' : m)}
         style={[styles.tool, active && styles.toolActive]}
@@ -69,8 +69,8 @@ export function NumberPad({ width }: Props) {
         {notes ? pencilTool('pencil', t('pencil')) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Erase selected cell"
-          accessibilityHint="Removes the digit you entered in the selected cell"
+          accessibilityLabel={t('erase')}
+          accessibilityHint={t('erase_hint')}
           onPress={clearSelected}
           style={({ pressed }) => [styles.tool, styles.erase, pressed && styles.erasePressed]}
         >
@@ -80,8 +80,8 @@ export function NumberPad({ width }: Props) {
         {hintsOn ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Hint"
-            accessibilityHint="Fills the selected empty cell with the right digit. It does not count as a mistake."
+            accessibilityLabel={t('hint')}
+            accessibilityHint={t('hint_hint')}
             disabled={hintsLeft === 0}
             onPress={useHint}
             style={[styles.tool, styles.hint, hintsLeft === 0 && styles.disabled]}

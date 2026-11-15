@@ -57,7 +57,7 @@ export function TopBar() {
 
   return (
     <View style={styles.bar}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={show} style={styles.menuButton}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('menu')} onPress={show} style={styles.menuButton}>
         <MaterialCommunityIcons name="menu" size={26} color={c.text} />
       </Pressable>
       <View style={styles.middle}>

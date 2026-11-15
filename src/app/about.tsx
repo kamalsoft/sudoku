@@ -3,13 +3,14 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useT } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-
-// About the app, the developer, how Parent lock works, and the disclaimer.
+// About the app, the developer, privacy, how Parent lock works, and the disclaimer.
 export default function AboutScreen() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -18,56 +19,43 @@ export default function AboutScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topBar}>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('back')}</Text>
           </Pressable>
-          <Text style={styles.title}>About</Text>
+          <Text style={styles.title}>{t('about_title')}</Text>
         </View>
 
         <View style={styles.hero}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} accessibilityLabel="Sudoku logo" />
           <Text style={styles.appName}>Sudoku</Text>
-          <Text style={styles.version}>Version {version}</Text>
+          <Text style={styles.version}>{t('about_version', { v: version })}</Text>
         </View>
 
-        <Section title="About the app">
-          <Text style={styles.body}>
-            A calm, colourful Sudoku for kids and families. Five levels, a daily puzzle, hints, stars and badges,
-            and friendly animals that walk across the board. It works in a browser, can be added to your home
-            screen, and runs on phones and tablets.
-          </Text>
+        <Section title={t('about_app_head')}>
+          <Text style={styles.body}>{t('about_app_body')}</Text>
         </Section>
 
-        <Section title="Developer">
-          <Text style={styles.body}>Developer: Kamalesh.</Text>
+        <Section title={t('about_dev_head')}>
+          <Text style={styles.body}>{t('about_dev_body')}</Text>
         </Section>
 
-        <Section title="Privacy">
-          <Text style={styles.body}>
-            Everything stays on this device: games, stats, profiles and settings. There are no accounts, no ads and
-            no tracking.
-          </Text>
+        <Section title={t('about_privacy_head')}>
+          <Text style={styles.body}>{t('about_privacy_body')}</Text>
         </Section>
 
-        <Section title="How Parent lock works">
-          <Text style={styles.body}>
-            Turn on Parent lock in Settings, under Kids. After that, opening Settings or the parent summary asks a
-            simple sum. Pick the right answer to continue. Choose &quot;Not now&quot; to close the question.
-          </Text>
+        <Section title={t('about_parent_head')}>
+          <Text style={styles.body}>{t('about_parent_body')}</Text>
         </Section>
 
         <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')} style={styles.linkButton}>
-          <Text style={styles.linkText}>Privacy</Text>
+          <Text style={styles.linkText}>{t('privacy')}</Text>
         </Pressable>
         <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} style={styles.linkButton}>
-          <Text style={styles.linkText}>Terms</Text>
+          <Text style={styles.linkText}>{t('terms')}</Text>
         </Pressable>
 
         <View style={styles.disclaimer} accessibilityRole="summary">
-          <Text style={styles.disclaimerTitle}>Disclaimer</Text>
-          <Text style={styles.body}>
-            This app is for fun and personal use. It is not a commercial product. It does not replicate any
-            commercial product, and no code has been copied from any commercial game.
-          </Text>
+          <Text style={styles.disclaimerTitle}>{t('about_disclaimer_title')}</Text>
+          <Text style={styles.body}>{t('about_disclaimer_body')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -100,10 +88,9 @@ function makeStyles(c: Palette) {
     section: { gap: 8, padding: 16, borderRadius: c.radius + 4, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line },
     sectionTitle: { fontSize: 13, fontWeight: '700', color: c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
     body: { fontSize: 15, lineHeight: 22, color: c.text },
-    linkRow: { paddingVertical: 6 },
     linkText: { fontSize: 15, fontWeight: '700', color: c.accent },
-    disclaimer: { gap: 8, padding: 16, borderRadius: c.radius + 4, borderWidth: 1, borderColor: c.muted, backgroundColor: c.background },
     linkButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, borderWidth: 2, borderColor: c.accent },
+    disclaimer: { gap: 8, padding: 16, borderRadius: c.radius + 4, borderWidth: 1, borderColor: c.muted, backgroundColor: c.background },
     disclaimerTitle: { fontSize: 15, fontWeight: '800', color: c.text },
   });
 }

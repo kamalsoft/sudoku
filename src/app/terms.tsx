@@ -1,48 +1,26 @@
 import { Bullet, Heading, Page, Para } from '../components/Page';
+import { useT } from '../i18n';
 
 export default function TermsScreen() {
+  const t = useT();
   return (
-    <Page title="Terms">
-      <Para>Last updated 14 November 2026.</Para>
-
-      <Heading>Using Sudoku</Heading>
-      <Para>
-        By using Sudoku you agree to these terms. Sudoku is for personal, family and friends use. It is free, has no
-        ads, and is not sold.
-      </Para>
-
-      <Heading>No commercial use</Heading>
-      <Para>
-        You may not sell the app, charge for it, or use it in a commercial product. It is not a commercial product,
-        and it does not replicate any commercial product.
-      </Para>
-
-      <Heading>Provided as it is</Heading>
-      <Para>
-        The app is provided as it is, without warranties of any kind. Puzzles, stats and saved progress are kept on
-        your device, and we cannot recover them if they are lost. Back up what matters to you.
-      </Para>
-
-      <Heading>Grown-ups and children</Heading>
-      <Para>
-        A grown-up should supervise children using the app and decide what settings suit them. Parent lock and
-        Kid-safe mode are there to help.
-      </Para>
-
-      <Heading>Acceptable use</Heading>
-      <Bullet>Do not try to break, copy or resell the app.</Bullet>
-      <Bullet>Do not use the app to harm anyone.</Bullet>
-
-      <Heading>Ownership</Heading>
-      <Para>
-        The code and artwork belong to the developer, Kamalesh. Sudoku is a classic puzzle. No code has been copied
-        from any commercial game.
-      </Para>
-
-      <Heading>Changes and questions</Heading>
-      <Para>
-        These terms may change. The newest version is shown in the app. Ask questions by contacting the developer, Kamalesh.
-      </Para>
+    <Page title={t('terms_title')}>
+      <Para>{t('updated')}</Para>
+      <Heading>{t('terms_h1')}</Heading>
+      <Para>{t('terms_p1')}</Para>
+      <Heading>{t('terms_h2')}</Heading>
+      <Para>{t('terms_p2')}</Para>
+      <Heading>{t('terms_h3')}</Heading>
+      <Para>{t('terms_p3')}</Para>
+      <Heading>{t('terms_h4')}</Heading>
+      <Para>{t('terms_p4')}</Para>
+      <Heading>{t('terms_h5')}</Heading>
+      <Bullet>{t('terms_b1')}</Bullet>
+      <Bullet>{t('terms_b2')}</Bullet>
+      <Heading>{t('terms_h6')}</Heading>
+      <Para>{t('terms_p5')}</Para>
+      <Heading>{t('terms_h7')}</Heading>
+      <Para>{t('terms_p6')}</Para>
     </Page>
   );
 }

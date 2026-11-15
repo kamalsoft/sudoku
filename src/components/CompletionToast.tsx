@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
-import { unitLabel } from '../sudoku/rules';
+import { useT } from '../i18n';
 import { useGameStore } from '../sudoku/store';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
@@ -10,7 +10,11 @@ export function CompletionToast() {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const flash = useGameStore((s) => s.unitFlash);
-  const text = flash ? `${flash.units.map(unitLabel).join(' and ')} complete!` : '';
+  const t = useT();
+  const names = (flash?.units ?? []).map((u) =>
+    u < 9 ? t('unit_row', { n: u + 1 }) : u < 18 ? t('unit_column', { n: u - 8 }) : t('unit_block', { n: u - 17 }),
+  );
+  const text = flash ? t('unit_complete', { units: names.join(t('units_joined')) }) : '';
   const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {

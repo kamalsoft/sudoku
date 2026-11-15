@@ -1,36 +1,38 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useReduceMotion } from '../motion';
-import { TOUR_STEPS, useTour } from '../tour';
+import { useT } from '../i18n';
+import type { StringKey } from '../i18n';
+import { TOUR_DEMO_STEP, TOUR_LENGTH, useTour } from '../tour';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
 // The app tour: a card over the game with one idea per step and a short demo on the first.
 export function Tour() {
   const c = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(c), [c]);
   const open = useTour((s) => s.open);
   const step = useTour((s) => s.step);
   const go = useTour((s) => s.go);
   const close = useTour((s) => s.close);
-  const current = TOUR_STEPS[step];
-  const last = step === TOUR_STEPS.length - 1;
+  const last = step === TOUR_LENGTH - 1;
 
   return (
     <Modal transparent visible={open} animationType="fade" onRequestClose={close}>
       <View style={styles.backdrop} accessibilityViewIsModal>
         <View style={styles.card}>
           <View style={styles.topRow}>
-            <Text style={styles.count}>{step + 1} / {TOUR_STEPS.length}</Text>
+            <Text style={styles.count}>{t('tour_count', { n: step + 1, total: TOUR_LENGTH })}</Text>
             <Pressable accessibilityRole="button" onPress={close} style={styles.skip}>
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={styles.skipText}>{t('skip')}</Text>
             </Pressable>
           </View>
-          {current.demo ? <Demo /> : null}
-          <Text style={styles.title}>{current.title}</Text>
-          <Text style={styles.body}>{current.body}</Text>
+          {step === TOUR_DEMO_STEP ? <Demo /> : null}
+          <Text style={styles.title}>{t(`tour_${step}_title` as StringKey)}</Text>
+          <Text style={styles.body}>{t(`tour_${step}_body` as StringKey)}</Text>
           <View style={styles.dots}>
-            {TOUR_STEPS.map((_, i) => (
+            {Array.from({ length: TOUR_LENGTH }, (_, i) => (
               <View key={i} style={[styles.dot, i === step && styles.dotOn]} />
             ))}
           </View>
@@ -41,10 +43,10 @@ export function Tour() {
               onPress={() => go(step - 1)}
               style={[styles.button, step === 0 && styles.disabled]}
             >
-              <Text style={styles.buttonText}>Back</Text>
+              <Text style={styles.buttonText}>{t('back')}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={() => (last ? close() : go(step + 1))} style={[styles.button, styles.primary]}>
-              <Text style={styles.primaryText}>{last ? 'Done' : 'Next'}</Text>
+              <Text style={styles.primaryText}>{last ? t('done') : t('next')}</Text>
             </Pressable>
           </View>
         </View>

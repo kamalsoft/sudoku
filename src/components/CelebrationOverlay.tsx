@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDuration } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
-import { badges as computeBadges, starsFor } from '../sudoku/progress';
+import { starsFor } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
 import { usePrefs } from '../prefs';
 import { ANIMALS } from './AnimalFriends';
 import { useReduceMotion } from '../motion';
-import { useT } from '../i18n';
+import { badgeKey, useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
@@ -28,9 +29,7 @@ export function CelebrationOverlay() {
   const rewardsOn = usePrefs((s) => s.rewards);
   const animals = usePrefs((s) => s.animals);
   const unseen = useProgress((s) => s.unseenBadges);
-  const games = useProgress((s) => s.games);
-  const titles = Object.fromEntries(computeBadges(games, 0).map((b) => [b.id, b.title]));
-  const earned = unseen.map((id) => titles[id] ?? id);
+  const earned = unseen.map((id) => t(`badge_${badgeKey(id)}` as StringKey));
   const parade = rewardsOn ? ANIMALS.filter((a) => animals.includes(a.id)) : [];
   const stars = starsFor(mistakes, hints);
   const newGame = useGameStore((s) => s.newGame);
@@ -61,15 +60,15 @@ export function CelebrationOverlay() {
     <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: fade }]} accessibilityViewIsModal>
       <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
         {badgesOn ? (
-          <Text style={styles.stars} accessibilityLabel={`${stars} of 3 stars`}>
+          <Text style={styles.stars} accessibilityLabel={t('stars_of', { n: stars })}>
             {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}
           </Text>
         ) : null}
         <Text style={styles.title}>{t('complete')}</Text>
         {daily !== null ? <Text style={styles.daily}>{t('daily_star')}</Text> : null}
         <Text style={styles.body}>
-          {formatDuration(accumulatedMs)} · {mistakes} {mistakes === 1 ? 'mistake' : 'mistakes'}
-          {hints > 0 ? ` · ${hints} ${hints === 1 ? 'hint' : 'hints'}` : ''}
+          {formatDuration(accumulatedMs)} · {mistakes === 1 ? t('mistake_one') : t('mistake_many', { n: mistakes })}
+          {hints > 0 ? ` · ${hints === 1 ? t('hint_one') : t('hint_many', { n: hints })}` : ''}
         </Text>
         {badgesOn && earned.length > 0 ? (
           <Text style={styles.badge} accessibilityLiveRegion="polite">{t('new_badge')}: {earned.join(', ')}</Text>

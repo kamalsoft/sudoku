@@ -144,32 +144,32 @@ export function MenuPanel() {
             </View>
           </Section>
 
-          <Section title="Help" styles={styles}>
+          <Section title={t('help')} styles={styles}>
             <View style={styles.row}>
               <Pressable accessibilityRole="button" onPress={() => act(() => useTour.getState().show(0))} style={styles.action}>
-                <Text style={styles.actionText}>App tour</Text>
+                <Text style={styles.actionText}>{t('app_tour')}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => go('/howto')} style={styles.action}>
-                <Text style={styles.actionText}>How to play</Text>
+                <Text style={styles.actionText}>{t('how_to_play')}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => go('/privacy')} style={styles.action}>
-                <Text style={styles.actionText}>Privacy</Text>
+                <Text style={styles.actionText}>{t('privacy')}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => go('/terms')} style={styles.action}>
-                <Text style={styles.actionText}>Terms</Text>
+                <Text style={styles.actionText}>{t('terms')}</Text>
               </Pressable>
             </View>
             {Platform.OS === 'web' ? (
               install.installed ? (
-                <Text style={styles.note}>✓ Sudoku is installed on this device.</Text>
+                <Text style={styles.note}>{t('install_installed')}</Text>
               ) : install.canInstall ? (
                 <Pressable accessibilityRole="button" onPress={() => act(() => void install.promptInstall())} style={styles.installButton}>
-                  <Text style={styles.primaryText}>Install Sudoku</Text>
+                  <Text style={styles.primaryText}>{t('install_sudoku')}</Text>
                 </Pressable>
               ) : install.ios ? (
-                <Text style={styles.note}>On iPhone or iPad: tap Share, then Add to Home Screen.</Text>
+                <Text style={styles.note}>{t('install_ios')}</Text>
               ) : (
-                <Text style={styles.note}>To install, use your browser&apos;s menu and choose Install or Add to Home Screen.</Text>
+                <Text style={styles.note}>{t('install_other')}</Text>
               )
             ) : null}
           </Section>

@@ -1,4 +1,5 @@
 import type { Difficulty } from './sudoku/levels.ts';
+import { hashText } from './sudoku/rules.ts';
 
 // A named challenge: a fixed level, clock, mistake limit and hint limit. Challenges always have a mistake limit,
 // so they are never casual (Kid-safe mode aside, which turns limits off).
@@ -37,4 +38,16 @@ export function gameLimits(challenge: Challenge | undefined, settings: { mistake
   return challenge
     ? { mistakeLimit: challenge.mistakes, hintLimit: challenge.hintLimit }
     : { mistakeLimit: settings.mistakeLimit, hintLimit: settings.hintLimit };
+}
+
+// The Monday that starts the week containing `day` (YYYY-MM-DD).
+export function weekStart(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
+// One challenge for the whole week, the same for everyone, picked from the table by the week's start date.
+export function weeklyChallenge(day: string): Challenge {
+  return CHALLENGES[hashText(`week-${weekStart(day)}`) % CHALLENGES.length];
 }

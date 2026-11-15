@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { initPwa } from '../install';
 import { ParentGate } from '../components/ParentGate';
 import { usePrefs } from '../prefs';
+import { useNight } from '../night';
 import { bootApp } from '../profiles';
 import { maybeShowFirstRunTour } from '../tour';
 import { useColors } from '../theme';
@@ -18,6 +19,12 @@ export default function RootLayout() {
   useEffect(() => {
     initPwa();
     void bootApp().then(maybeShowFirstRunTour);
+  }, []);
+
+  // Re-checks the night hours every minute, so the night skin starts and stops on time.
+  useEffect(() => {
+    const id = setInterval(() => useNight.getState().check(), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   if (!prefsReady) {

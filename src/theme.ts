@@ -1,4 +1,5 @@
 import { usePrefs } from './prefs';
+import { useNight } from './night';
 
 export type ThemeName = 'light' | 'sepia' | 'dark' | 'oled' | 'candy' | 'sunshine' | 'ocean' | 'jungle' | 'space' | 'rainbow';
 
@@ -260,5 +261,8 @@ export const THEMES: Record<ThemeName, Palette> = {
 export const THEME_NAMES = Object.keys(THEMES) as ThemeName[];
 
 export function useColors(): Palette {
-  return THEMES[usePrefs((s) => s.theme)];
+  const theme = usePrefs((s) => s.theme);
+  const autoNight = usePrefs((s) => s.autoNight);
+  const night = useNight((s) => s.isNight);
+  return THEMES[autoNight && night ? 'dark' : theme];
 }

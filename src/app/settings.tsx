@@ -4,15 +4,19 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePrefs } from '../prefs';
+import type { SoundPack } from '../prefs';
 import { ANIMALS } from '../components/AnimalFriends';
 import { useProfiles } from '../profiles';
 import { LANGUAGES, useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { useInstall } from '../install';
 import { useColors } from '../theme';
 import { SKIN_KEYS } from '../skins';
 import type { Palette } from '../theme';
 
 
+
+const SOUND_PACKS: SoundPack[] = ['classic', 'calm', 'playful', 'silent'];
 
 const HINT_LIMITS: { value: number | null; label: string }[] = [
   { value: 3, label: '3' },
@@ -61,6 +65,9 @@ export default function SettingsScreen() {
   const largeDigits = usePrefs((s) => s.largeDigits);
   const colorBlind = usePrefs((s) => s.colorBlind);
   const animals = usePrefs((s) => s.animals);
+  const autoNight = usePrefs((s) => s.autoNight);
+  const practice = usePrefs((s) => s.practice);
+  const soundPack = usePrefs((s) => s.soundPack);
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const { canInstall, installed, ios, promptInstall } = useInstall();
 
@@ -88,6 +95,7 @@ export default function SettingsScreen() {
             <Text style={[styles.label, styles.labelGrow]}>{t('row_skin')}</Text>
             <Text style={styles.value}>{t(SKIN_KEYS[theme])} ›</Text>
           </Pressable>
+          <ToggleRow styles={styles} c={c} label={t('row_night')} value={autoNight} last onChange={(v) => update('autoNight', v)} />
         </Group>
 
         <Group
@@ -112,6 +120,8 @@ export default function SettingsScreen() {
             value={levelUp}
             onChange={(v) => update('levelUp', v)}
           />
+          <ToggleRow styles={styles} c={c} label={t('row_practice')} value={practice} onChange={(v) => update('practice', v)} />
+          <Text style={styles.footer}>{t('foot_practice')}</Text>
           <ToggleRow
             styles={styles}
             c={c}
@@ -163,6 +173,16 @@ export default function SettingsScreen() {
           footer={Platform.OS === 'web' ? t('foot_feedback_web') : t('foot_feedback')}
         >
           <ToggleRow styles={styles} c={c} label={t('row_sound')} value={sound} onChange={(v) => update('sound', v)} />
+          <View style={[styles.rowPlain, !sound && styles.disabled]}>
+            <Text style={[styles.label, styles.labelGrow]}>{t('row_sound_pack')}</Text>
+            <Segmented
+              styles={styles}
+              c={c}
+              options={SOUND_PACKS.map((p) => ({ value: p, label: t(`pack_${p}` as StringKey) }))}
+              value={soundPack}
+              onChange={(v) => update('soundPack', v)}
+            />
+          </View>
           <ToggleRow styles={styles} c={c} label={t('row_haptics')} value={haptics} last onChange={(v) => update('haptics', v)} />
         </Group>
 

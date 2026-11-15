@@ -2,15 +2,19 @@ import { LEVELS } from './levels.ts';
 import type { Difficulty } from './levels.ts';
 import type { GameRecord } from './stats.ts';
 
-// Same seed for every device on the same local day, so the daily puzzle is shared without a server.
-export function dailySeed(day: string): number {
-  // FNV-1a over the day string.
+// FNV-1a hash of a string, as an unsigned 32-bit number.
+export function hashText(text: string): number {
   let hash = 0x811c9dc5;
-  for (const ch of `daily-${day}`) {
+  for (const ch of text) {
     hash ^= ch.charCodeAt(0);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash;
+}
+
+// Same seed for every device on the same local day, so the daily puzzle is shared without a server.
+export function dailySeed(day: string): number {
+  return hashText(`daily-${day}`);
 }
 
 // A mistake is a digit that differs from the solution. Clearing a cell does not undo one.

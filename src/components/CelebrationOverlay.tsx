@@ -28,6 +28,7 @@ export function CelebrationOverlay() {
   const hints = useGameStore((s) => s.hints);
   const daily = useGameStore((s) => s.daily);
   const difficulty = useGameStore((s) => s.difficulty);
+  const personalBest = useGameStore((s) => s.personalBest);
   const badgesOn = usePrefs((s) => s.badges);
   const rewardsOn = usePrefs((s) => s.rewards);
   const animals = usePrefs((s) => s.animals);
@@ -90,6 +91,7 @@ export function CelebrationOverlay() {
           {hints > 0 ? ` · ${hints === 1 ? t('hint_one') : t('hint_many', { n: hints })}` : ''}
         </Text>
         <Text style={styles.motivate}>{winLine}</Text>
+        {badgesOn && qualified && personalBest ? <Text style={styles.badge}>{t('personal_best', { level: t(difficulty) })}</Text> : null}
         {progressLine ? <Text style={styles.progress}>{progressLine}</Text> : null}
         {badgesOn && earned.length > 0 ? (
           <Text style={styles.badge} accessibilityLiveRegion="polite">{t('new_badge')}: {earned.join(', ')}</Text>

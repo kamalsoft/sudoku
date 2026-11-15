@@ -30,9 +30,16 @@ export function NumberPad({ width }: Props) {
   const hintLimit = usePrefs((s) => s.hintLimit);
   const notes = usePrefs((s) => s.notes);
   const largeDigits = usePrefs((s) => s.largeDigits);
+  const practice = usePrefs((s) => s.practice);
+  const values = useGameStore((s) => s.board.values);
+  const solution = useGameStore((s) => s.solution);
+  const focusDigit = useGameStore((s) => s.focusDigit);
+  const setFocusDigit = useGameStore((s) => s.setFocusDigit);
   const hintsLeft = hintLimit === null ? null : Math.max(0, hintLimit - hintsUsed);
   const gap = 8;
   const keySize = (width - gap * 2) / 3;
+  // Digits still to place: nine minus the ones already right on the board.
+  const remaining = (digit: number) => 9 - values.filter((v, i) => v === digit && solution[i] === digit).length;
 
   const pencilTool = (m: Mode, label: string) => {
     const active = mode === m;
@@ -57,11 +64,19 @@ export function NumberPad({ width }: Props) {
           <Pressable
             key={n}
             accessibilityRole="button"
-            accessibilityLabel={`Digit ${n + 1}`}
+            accessibilityLabel={practice ? `Digit ${n + 1}, ${t('practice_left', { n: remaining(n + 1) })}` : `Digit ${n + 1}`}
+            accessibilityHint={practice ? t('practice_hint') : undefined}
             onPress={() => inputDigit(n + 1)}
-            style={({ pressed }) => [styles.key, { width: keySize, height: PAD_KEY_HEIGHT, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+            onLongPress={practice ? () => setFocusDigit(n + 1) : undefined}
+            delayLongPress={350}
+            style={({ pressed }) => [
+              styles.key,
+              { width: keySize, height: PAD_KEY_HEIGHT, transform: [{ scale: pressed ? 0.94 : 1 }] },
+              focusDigit === n + 1 && styles.keyFocus,
+            ]}
           >
-            <Text style={[styles.keyText, largeDigits && { fontSize: 30 }]}>{n + 1}</Text>
+            <Text style={[styles.keyText, largeDigits && { fontSize: 30 }, practice && styles.keyTextPractice]}>{n + 1}</Text>
+            {practice ? <Text style={styles.left}>{t('practice_left', { n: remaining(n + 1) })}</Text> : null}
           </Pressable>
         ))}
       </View>
@@ -112,6 +127,19 @@ function makeStyles(c: Palette) {
       fontSize: 24,
       fontWeight: '800',
       color: c.text,
+    },
+    keyTextPractice: {
+      fontSize: 20,
+      lineHeight: 22,
+    },
+    keyFocus: {
+      borderColor: c.accent,
+      borderWidth: 3,
+    },
+    left: {
+      fontSize: 10,
+      lineHeight: 12,
+      color: c.muted,
     },
     row: {
       flexDirection: 'row',

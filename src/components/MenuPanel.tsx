@@ -17,7 +17,7 @@ import { LEVELS } from '../sudoku/levels.ts';
 import { CASUAL_DAILY_WINS, CASUAL_MAX_LEVEL, casualWinsOn, isCasual, levelAllowed } from '../sudoku/rules';
 import { dayKey } from '../sudoku/stats';
 import { useGameStore } from '../sudoku/store';
-import { CHALLENGES } from '../challenges';
+import { CHALLENGES, weeklyChallenge } from '../challenges';
 import type { Challenge } from '../challenges';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
@@ -222,6 +222,9 @@ export function MenuPanel() {
           {tab === 'challenges' ? (
             <>
               <Text style={styles.note}>{t('challenges_intro')}</Text>
+              <Section title={t('weekly_title')} styles={styles}>
+                {renderChallenge(weeklyChallenge(dayKey(new Date())))}
+              </Section>
               {TIERS.map((tier) => (
                 <Section key={tier.key} title={t(tier.key)} styles={styles}>
                   {CHALLENGES.filter((ch) => tier.levels.includes(ch.level)).map(renderChallenge)}

@@ -8,7 +8,7 @@ import type { Mode } from './moves';
 import { SAVED_HISTORY_STEPS, elapsedMs, parseSession, remainingMs } from './session';
 import type { SessionRecord } from './session';
 import { casualWinsOn, completedUnits, dailySeed, guardedMistakeLimit, guardedTimeLimit, hintsQualify, isCasual, isMistake, levelAllowed, markErrors, outOfMistakes } from './rules';
-import { dayKey } from './stats';
+import { dayKey, summarize } from './stats';
 import type { GameRecord } from './stats';
 import { findChallenge, gameLimits } from '../challenges';
 import { starsFor } from './progress';
@@ -59,6 +59,11 @@ interface GameState {
   failed: FailReason | null;
   // Local day of the daily challenge being played, or null for a normal game.
   daily: string | null;
+  // True when the last win beat the best qualified time on its level.
+  personalBest: boolean;
+  // Practice by digit: the digit whose possible cells are highlighted, or null.
+  focusDigit: number | null;
+  setFocusDigit: (digit: number) => void;
   // Id of the named challenge being played, or null. A challenge sets its own clock and limits.
   challenge: string | null;
   // The clock the player picked in the menu. Kept apart from a challenge's clock so the next game is not affected.
@@ -229,7 +234,9 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     if (solved) {
       const elapsed = elapsedNow();
-      set({ board, errors, solved, history, unitFlash, accumulatedMs: elapsed, runningSince: null });
+      const bestBefore = summarize(useProgress.getState().games, dayKey(new Date())).byDifficulty[s.difficulty].bestMs;
+      const personalBest = hintsQualify(s.puzzle, s.hints) && (bestBefore === null || elapsed < bestBefore);
+      set({ board, errors, solved, history, unitFlash, accumulatedMs: elapsed, runningSince: null, personalBest });
       enqueue(() => recordAndRefresh(recordFor(s, true, elapsed)));
       enqueue(clearSession);
       feedback('success');
@@ -260,6 +267,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       failed: null,
       daily,
       challenge,
+      personalBest: false,
+      focusDigit: null,
       timeChoice: challenge === null ? timeLimitMs : s.timeChoice,
       selected: null,
       mode: 'enter',
@@ -301,6 +310,8 @@ export const useGameStore = create<GameState>()((set, get) => {
     daily: null,
     challenge: null,
     timeChoice: null,
+    personalBest: false,
+    focusDigit: null,
 
     init: () => {
       initializing ??= (async () => {
@@ -344,6 +355,8 @@ export const useGameStore = create<GameState>()((set, get) => {
       })();
       return initializing;
     },
+
+    setFocusDigit: (digit) => set({ focusDigit: get().focusDigit === digit ? null : digit }),
 
     selectCell: (index) => {
       if (get().selected !== index) feedback('tick');

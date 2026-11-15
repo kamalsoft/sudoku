@@ -75,3 +75,13 @@ test('Challenger is earned by one named challenge win; Mission Control needs eve
   assert.equal(got(all)['mission-control'], true);
   assert.equal(got([win('easy', { challenge: CHALLENGES[0].id, qualified: false })]).challenger, false, 'unqualified wins do not count');
 });
+
+test('speed badges need a Medium or harder win under the time', () => {
+  const got = (games: GameRecord[]) => Object.fromEntries(badges(games, 0).map((b) => [b.id, b.unlocked]));
+  const quick = got([win('medium', { elapsedMs: 240_000 })]);
+  assert.equal(quick['quick-thinker'], true);
+  assert.equal(quick['speed-run'], true);
+  assert.equal(quick.lightning, false);
+  assert.equal(got([win('easy', { elapsedMs: 60_000 })])['quick-thinker'], false, 'Easy wins do not count');
+  assert.equal(got([win('hard', { elapsedMs: 60_000, qualified: false })]).lightning, false, 'unqualified wins do not count');
+});

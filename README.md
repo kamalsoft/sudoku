@@ -20,6 +20,11 @@ Developer: Kamalesh
 - **Profiles:** each child has their own games, stats, badges and settings on the same device.
 - **Stats and summary:** recent games (with Replay), best times, a by-level table and a weekly parent summary.
 - **Comfort:** large digits, colour-blind markers, reduced motion, and skins in three categories (Classic, Dark and Kids).
+- **Night skin:** optionally switch to the dark skin from 8 pm to 7 am.
+- **Practice by digit:** each digit shows how many are left. Press and hold a digit to highlight the empty cells where it can still go.
+- **Weekly challenge:** one named challenge each week, the same for everyone.
+- **Speed badges and personal bests:** Quick thinker, Speed run and Lightning for Medium or harder wins, and a banner when a win is a new personal best.
+- **Sound style:** Classic, Calm, Playful or Silent.
 - **Languages:** English, Español and Français.
 - **Installable:** add the web version to your home screen, or install it on a phone.
 - **No ads, no accounts, no tracking.**

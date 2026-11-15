@@ -37,6 +37,8 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
   const hardWin = qualified.some((g) => ['hard', 'expert', 'master', 'evil', 'genius'].includes(g.difficulty));
   const flawless = qualified.some((g) => g.mistakes === 0);
   const challengeIds = new Set(qualified.map((g) => g.challenge).filter(Boolean));
+  const mediumOrHarder = (g: GameRecord) => LEVELS.indexOf(g.difficulty) >= LEVELS.indexOf('medium');
+  const fastWin = (minutes: number) => qualified.some((g) => mediumOrHarder(g) && g.elapsedMs < minutes * 60_000);
   return [
     { id: 'first-win', title: 'First win', description: 'Finish your first puzzle.', unlocked: wins >= 1 },
     { id: 'five-wins', title: 'Five wins', description: 'Finish five puzzles.', unlocked: wins >= 5 },
@@ -46,6 +48,9 @@ export function badges(games: GameRecord[], dailyStreak: number): Badge[] {
     { id: 'flawless', title: 'Flawless', description: 'Finish a puzzle with no mistakes.', unlocked: flawless },
     { id: 'brave', title: 'Brave solver', description: 'Finish a Hard or harder puzzle.', unlocked: hardWin },
     { id: 'challenger', title: 'Challenger', description: 'Win a named challenge.', unlocked: challengeIds.size >= 1 },
+    { id: 'quick-thinker', title: 'Quick thinker', description: 'Finish a Medium or harder puzzle in under 10 minutes.', unlocked: fastWin(10) },
+    { id: 'speed-run', title: 'Speed run', description: 'Finish a Medium or harder puzzle in under 5 minutes.', unlocked: fastWin(5) },
+    { id: 'lightning', title: 'Lightning', description: 'Finish a Medium or harder puzzle in under 3 minutes.', unlocked: fastWin(3) },
     { id: 'mission-control', title: 'Mission Control', description: 'Win every named challenge.', unlocked: CHALLENGES.every((c) => challengeIds.has(c.id)) },
   ];
 }

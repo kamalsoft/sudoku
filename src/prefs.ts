@@ -2,8 +2,13 @@ import { create } from 'zustand';
 import { getSetting, setSetting } from './db/persistence';
 import type { ThemeName } from './theme';
 
+// Sound style: Classic, Calm (softer and slower), Playful (brighter and quicker), or Silent.
+export type SoundPack = 'classic' | 'calm' | 'playful' | 'silent';
+
 interface Prefs {
   theme: ThemeName;
+  // Dark skin from 8 pm to 7 am, whatever skin is chosen.
+  autoNight: boolean;
   haptics: boolean;
   sound: boolean;
   // Pencil marks on or off. Off hides the notes controls and makes digit entry always write values.
@@ -20,6 +25,9 @@ interface Prefs {
   badges: boolean;
   // Level up: harder levels unlock after wins on the level before.
   levelUp: boolean;
+  // Practice by digit: remaining counts per digit, and a highlight of where a digit can go.
+  practice: boolean;
+  soundPack: SoundPack;
   // Celebrations with the animal friends after a daily win or a new badge.
   rewards: boolean;
   // Comfort: bigger digits, and wrong or matching cells marked with more than colour.
@@ -41,6 +49,7 @@ interface PrefsState extends Prefs {
 
 const DEFAULTS: Prefs = {
   theme: 'light',
+  autoNight: false,
   haptics: true,
   sound: true,
   notes: true,
@@ -51,6 +60,8 @@ const DEFAULTS: Prefs = {
   hintLimit: 3,
   badges: true,
   levelUp: false,
+  practice: false,
+  soundPack: 'classic',
   rewards: true,
   largeDigits: false,
   colorBlind: false,

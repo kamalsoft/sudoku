@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import { UNITS } from '../sudoku/engine';
-import { cellTone } from '../sudoku/highlight';
+import { canPlaceDigit, cellTone } from '../sudoku/highlight';
 import { useGameStore } from '../sudoku/store';
 import { useReduceMotion } from '../motion';
 import { usePrefs } from '../prefs';
@@ -31,13 +31,15 @@ export function SudokuCell({ index, size }: Props) {
       return u === undefined ? { nonce: 0, delay: 0 } : { nonce: flash!.nonce, delay: UNITS[u].indexOf(index) * 70 };
     }),
   );
-  const { value, given, notes, tone, wrong } = useGameStore(
+  const { value, given, notes, tone, wrong, possible } = useGameStore(
     useShallow((s) => ({
       value: s.board.values[index],
       given: s.board.givens[index],
       notes: s.board.notes[index],
       tone: cellTone(s.board.values, s.errors, s.selected, index),
       wrong: s.errors[index] && !s.board.givens[index],
+      // Practice by digit: empty cells where the focused digit can still go.
+      possible: s.focusDigit !== null && canPlaceDigit(s.board.values, index, s.focusDigit),
     })),
   );
 
@@ -86,7 +88,7 @@ export function SudokuCell({ index, size }: Props) {
 
   const row = Math.floor(index / 9);
   const col = index % 9;
-  const bgColor = tone === 'none' ? c.surface : c.tone[tone];
+  const bgColor = tone !== 'none' ? c.tone[tone] : possible ? c.tone.same : c.surface;
   const label = `Row ${row + 1}, column ${col + 1}, ${value ? `${given ? 'given' : 'your'} ${value}` : 'empty'}${wrong ? ', wrong' : ''}`;
 
   return (

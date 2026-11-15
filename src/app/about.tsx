@@ -4,10 +4,13 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useT } from '../i18n';
+import type { StringKey } from '../i18n';
 import { useColors } from '../theme';
 import type { Palette } from '../theme';
 
-// About the app, the developer, privacy, how Parent lock works, and the disclaimer.
+// About the app, the developer, privacy, how Parent lock works, the FAQ, and the disclaimer.
+const FAQ = [1, 2, 3, 4, 5, 6, 7, 8];
+
 export default function AboutScreen() {
   const c = useColors();
   const t = useT();
@@ -44,6 +47,15 @@ export default function AboutScreen() {
 
         <Section title={t('about_parent_head')}>
           <Text style={styles.body}>{t('about_parent_body')}</Text>
+        </Section>
+
+        <Section title={t('faq_head')}>
+          {FAQ.map((n) => (
+            <View key={n} style={styles.faq}>
+              <Text style={styles.question}>{t(`faq_q${n}` as StringKey)}</Text>
+              <Text style={styles.body}>{t(`faq_a${n}` as StringKey)}</Text>
+            </View>
+          ))}
         </Section>
 
         <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')} style={styles.linkButton}>
@@ -88,6 +100,8 @@ function makeStyles(c: Palette) {
     section: { gap: 8, padding: 16, borderRadius: c.radius + 4, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line },
     sectionTitle: { fontSize: 13, fontWeight: '700', color: c.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
     body: { fontSize: 15, lineHeight: 22, color: c.text },
+    faq: { gap: 4 },
+    question: { fontSize: 15, fontWeight: '700', color: c.text },
     linkText: { fontSize: 15, fontWeight: '700', color: c.accent },
     linkButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, borderWidth: 2, borderColor: c.accent },
     disclaimer: { gap: 8, padding: 16, borderRadius: c.radius + 4, borderWidth: 1, borderColor: c.muted, backgroundColor: c.background },

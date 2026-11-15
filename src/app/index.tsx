@@ -7,6 +7,8 @@ import { CompletionToast } from '../components/CompletionToast';
 import { MenuPanel } from '../components/MenuPanel';
 import { NumberPad, PAD_KEY_HEIGHT } from '../components/NumberPad';
 import { TopBar } from '../components/TopBar';
+import { Tour } from '../components/Tour';
+import { maybeShowFirstRunTour } from '../tour';
 import { SudokuGrid } from '../components/SudokuGrid';
 import { useGameLifecycle } from '../hooks/useGameLifecycle';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
@@ -27,7 +29,7 @@ export default function GameRoute() {
   const prefsReady = usePrefs((s) => s.ready);
 
   useEffect(() => {
-    void bootApp();
+    void bootApp().then(maybeShowFirstRunTour);
   }, []);
 
   if (!ready || !prefsReady) {
@@ -88,6 +90,7 @@ function GameScreen() {
       <CompletionToast />
       <CelebrationOverlay />
       <MenuPanel />
+      <Tour />
     </SafeAreaView>
   );
 }

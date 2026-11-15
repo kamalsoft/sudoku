@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { askGrownUp } from '../gate';
 import { useT } from '../i18n';
 import { usePrefs } from '../prefs';
 import { useMenu } from '../menu';
+import { useInstall } from '../install';
+import { useTour } from '../tour';
 import { useProfiles } from '../profiles';
 import { unlockedLevels } from '../sudoku/progress';
 import { useProgress } from '../sudoku/progressStore';
@@ -48,7 +50,9 @@ export function MenuPanel() {
   const open_ = unlockedLevels(games, levelUp);
   const activeName = useProfiles((s) => s.profiles.find((p) => p.id === s.activeId)?.name ?? '');
 
-  const go = (path: '/stats' | '/settings' | '/about', gated = false) => {
+  const install = useInstall();
+
+  const go = (path: '/stats' | '/settings' | '/about' | '/howto' | '/privacy' | '/terms', gated = false) => {
     hide();
     const navigate = () => router.push(path);
     if (gated) askGrownUp(navigate);
@@ -60,11 +64,11 @@ export function MenuPanel() {
   };
 
   return (
-    <Modal transparent visible={open} animationType="slide" onRequestClose={hide}>
+    <Modal transparent visible={open} animationType="fade" onRequestClose={hide}>
       <Pressable style={styles.backdrop} onPress={hide} accessibilityLabel={t('close')} />
       <View style={styles.sheet} accessibilityViewIsModal>
         <View style={styles.handle} />
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
           <Text style={styles.playing}>{t('playing_as', { name: activeName })}</Text>
 
           <Section title={t('level')} styles={styles}>
@@ -140,6 +144,36 @@ export function MenuPanel() {
             </View>
           </Section>
 
+          <Section title="Help" styles={styles}>
+            <View style={styles.row}>
+              <Pressable accessibilityRole="button" onPress={() => act(() => useTour.getState().show(0))} style={styles.action}>
+                <Text style={styles.actionText}>App tour</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => go('/howto')} style={styles.action}>
+                <Text style={styles.actionText}>How to play</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => go('/privacy')} style={styles.action}>
+                <Text style={styles.actionText}>Privacy</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => go('/terms')} style={styles.action}>
+                <Text style={styles.actionText}>Terms</Text>
+              </Pressable>
+            </View>
+            {Platform.OS === 'web' ? (
+              install.installed ? (
+                <Text style={styles.note}>✓ Sudoku is installed on this device.</Text>
+              ) : install.canInstall ? (
+                <Pressable accessibilityRole="button" onPress={() => act(() => void install.promptInstall())} style={styles.installButton}>
+                  <Text style={styles.primaryText}>Install Sudoku</Text>
+                </Pressable>
+              ) : install.ios ? (
+                <Text style={styles.note}>On iPhone or iPad: tap Share, then Add to Home Screen.</Text>
+              ) : (
+                <Text style={styles.note}>To install, use your browser&apos;s menu and choose Install or Add to Home Screen.</Text>
+              )
+            ) : null}
+          </Section>
+
           <Pressable accessibilityRole="button" onPress={hide} style={styles.close}>
             <Text style={styles.closeText}>{t('close')}</Text>
           </Pressable>
@@ -166,12 +200,13 @@ function makeStyles(c: Palette) {
       left: 0,
       right: 0,
       bottom: 0,
-      maxHeight: '82%',
+      height: '82%',
       borderTopLeftRadius: c.radius + 10,
       borderTopRightRadius: c.radius + 10,
       backgroundColor: c.surface,
     },
     handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: c.line, marginTop: 8 },
+    scroll: { flex: 1 },
     content: { padding: 20, gap: 18, paddingBottom: 32 },
     playing: { fontSize: 16, fontWeight: '800', color: c.accent },
     section: { gap: 8 },
@@ -187,6 +222,8 @@ function makeStyles(c: Palette) {
     primary: { backgroundColor: c.accent },
     actionText: { fontSize: 15, fontWeight: '700', color: c.accent },
     primaryText: { fontSize: 15, fontWeight: '700', color: c.onAccent },
+    note: { fontSize: 14, lineHeight: 20, color: c.muted },
+    installButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, backgroundColor: c.accent },
     close: { alignItems: 'center', paddingVertical: 12 },
     closeText: { fontSize: 16, fontWeight: '700', color: c.muted },
   });

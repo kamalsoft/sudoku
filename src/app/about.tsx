@@ -59,6 +59,13 @@ export default function AboutScreen() {
           </Text>
         </Section>
 
+        <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')} style={styles.linkButton}>
+          <Text style={styles.linkText}>Privacy</Text>
+        </Pressable>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/terms')} style={styles.linkButton}>
+          <Text style={styles.linkText}>Terms</Text>
+        </Pressable>
+
         <View style={styles.disclaimer} accessibilityRole="summary">
           <Text style={styles.disclaimerTitle}>Disclaimer</Text>
           <Text style={styles.body}>
@@ -100,6 +107,7 @@ function makeStyles(c: Palette) {
     linkRow: { paddingVertical: 6 },
     linkText: { fontSize: 15, fontWeight: '700', color: c.accent },
     disclaimer: { gap: 8, padding: 16, borderRadius: c.radius + 4, borderWidth: 1, borderColor: c.muted, backgroundColor: c.background },
+    linkButton: { alignItems: 'center', paddingVertical: 12, borderRadius: c.radius, borderWidth: 2, borderColor: c.accent },
     disclaimerTitle: { fontSize: 15, fontWeight: '800', color: c.text },
   });
 }
